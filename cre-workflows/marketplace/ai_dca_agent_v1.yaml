@@ -1,0 +1,176 @@
+# Copyright (c) 2025 Craig M. Brown. All rights reserved.
+#
+# BlindOracle AI DCA Agent - CRE Workflow Definition
+# ====================================================
+#
+# AI-powered dollar cost averaging with market intelligence.
+# Subscribers select a plan tier ($29/$49/$99 monthly) and the
+# agent executes optimized purchases daily, adjusting amounts
+# +/-20% based on market conditions (smart DCA).
+#
+# The agent processes all active subscriptions in sequence,
+# analyzing market conditions once per run, then executing
+# each subscriber's purchase with per-subscriber risk profiles.
+#
+# @requirement REQ-CRE-UC3 - AI-powered DCA service
+# @requirement REQ-BLP-001 - Domain understanding (DCA strategies)
+# @requirement REQ-BLP-011 - Independent decision making
+# @requirement REQ-BLP-019 - Logging and audit trail
+# @requirement REQ-BLP-023 - Error recovery
+
+name: ai_dca_agent_v1
+version: "1.0.0"
+description: >
+  AI-powered dollar cost averaging with market intelligence.
+  Executes daily purchases for subscribers, adjusting amounts
+  based on price trends and volatility analysis. Three subscription
+  tiers with increasing feature sets.
+
+trigger:
+  type: cron
+  schedule: "0 12 * * *"  # Daily at noon UTC
+
+autonomy: 0.99
+revenue_model: "$29-99/mo subscription tiers"
+
+handler:
+  runtime: python
+  module: handlers.dca_handler
+  class: DCAAgent
+  entrypoint: run_workflow
+
+config:
+  # Subscription tiers
+  subscription_tiers:
+    basic:
+      name: "Basic DCA"
+      price_usd_monthly: 29
+      supported_assets: ["BTC"]
+      features: ["fixed_dca"]
+      max_daily_sats: 100000
+
+    pro:
+      name: "Pro DCA"
+      price_usd_monthly: 49
+      supported_assets: ["BTC", "ETH"]
+      features: ["fixed_dca", "smart_dca"]
+      max_daily_sats: 500000
+
+    whale:
+      name: "Whale DCA"
+      price_usd_monthly: 99
+      supported_assets: ["BTC", "ETH"]
+      features: ["fixed_dca", "smart_dca", "volatility_scaling"]
+      max_daily_sats: 2000000
+
+  # Smart DCA adjustment range
+  smart_adjustment_pct: 20  # +/-20% based on market conditions
+
+  # Supported frequency options
+  frequencies: ["daily", "weekly", "monthly"]
+
+  # Subscription data store path
+  subscriptions_store: "data/dca_subscriptions.json"
+
+  # Security configuration
+  security_interface: "x402_api"
+  security_agent_id: "dca_agent_v1"
+
+steps:
+  - id: check_subscriptions
+    name: "Check Active Subscriptions"
+    description: >
+      Load all active DCA subscriptions from the JSON store.
+      Filter for subscriptions due for execution based on their
+      frequency setting (daily/weekly/monthly).
+    handler_method: check_subscriptions
+    timeout_seconds: 10
+
+  - id: analyze_market_conditions
+    name: "Analyze Market Conditions"
+    description: >
+      Perform market analysis for all relevant assets. Calculate
+      price trend (7-day SMA direction), volatility index (14-day
+      standard deviation), and momentum indicators. This data
+      drives smart DCA adjustments.
+    handler_method: analyze_market
+    depends_on: [check_subscriptions]
+    condition: "active_subscriptions > 0"
+    timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_seconds: 5
+
+  - id: calculate_optimal_amounts
+    name: "Calculate Optimal Purchase Amounts"
+    description: >
+      For each subscriber, calculate the optimal purchase amount.
+      Fixed DCA uses the configured amount. Smart DCA adjusts
+      +/-20% based on market conditions: increase purchases when
+      prices are below trend, decrease when above.
+    handler_method: calculate_optimal_amount
+    depends_on: [analyze_market_conditions]
+    timeout_seconds: 10
+
+  - id: execute_purchases
+    name: "Execute Purchases"
+    description: >
+      Execute purchase orders for each subscriber via the
+      CrossChainRouter. Each purchase is CaMel-secured. Failed
+      purchases are logged but do not block other subscribers.
+    handler_method: execute_purchase
+    depends_on: [calculate_optimal_amounts]
+    security:
+      camel_validation: true
+      operation: "swap_execute"
+    timeout_seconds: 120
+    retry:
+      max_attempts: 2
+      backoff_seconds: 10
+
+  - id: update_positions
+    name: "Update Subscriber Positions"
+    description: >
+      Update each subscriber's accumulated position with the
+      new purchase. Track total invested, total units acquired,
+      average cost basis, and current value.
+    handler_method: update_positions
+    depends_on: [execute_purchases]
+    timeout_seconds: 15
+
+  - id: notify_subscribers
+    name: "Notify Subscribers"
+    description: >
+      Generate execution reports for each subscriber with
+      purchase details, position summary, and market context.
+      Reports are logged and available via API.
+    handler_method: notify_subscriber
+    depends_on: [update_positions]
+    timeout_seconds: 30
+    always_run: true
+
+notifications:
+  on_purchase:
+    channels: [audit_log]
+    message_template: >
+      DCA purchase executed: {subscriber_id} bought {amount_sats}
+      sats of {asset} at {price_context}
+  on_error:
+    channels: [audit_log]
+    message_template: >
+      DCA agent error for {subscriber_id}: {error_message}
+
+monitoring:
+  metrics:
+    - name: dca_active_subscriptions
+      type: gauge
+      description: "Number of active DCA subscriptions"
+    - name: dca_purchases_total
+      type: counter
+      description: "Total DCA purchases executed"
+    - name: dca_volume_sats
+      type: counter
+      description: "Total DCA volume in satoshis"
+    - name: dca_subscription_revenue_usd
+      type: counter
+      description: "Total subscription revenue in USD"

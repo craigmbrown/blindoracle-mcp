@@ -1,0 +1,156 @@
+# Copyright (c) 2025 Craig M. Brown. All rights reserved.
+#
+# BlindOracle Cross-Chain Arbitrage Breaker - CRE Workflow Definition
+# ====================================================================
+#
+# Automated arbitrage detection and execution across BTC/ETH/USDC
+# price feeds. The agent scans price feeds every 5 minutes, identifies
+# spreads above the minimum threshold, calculates optimal trade size
+# (Kelly criterion), executes via CaMel-secured CrossChainRouter, and
+# settles profit to the treasury.
+#
+# Revenue: 1% of arbitrage profit per trade.
+#
+# @requirement REQ-CRE-UC5 - Cross-chain arbitrage
+# @requirement REQ-BLP-001 - Domain understanding (arbitrage)
+# @requirement REQ-BLP-011 - Independent decision making
+# @requirement REQ-BLP-019 - Logging and audit trail
+# @requirement REQ-BLP-023 - Error recovery
+
+name: cross_chain_arbitrage_v1
+version: "1.0.0"
+description: >
+  Automated cross-chain arbitrage detection and execution. Scans
+  BTC/ETH/USDC price feeds every 5 minutes, identifies profitable
+  spreads, calculates optimal trade size via Kelly criterion, and
+  executes CaMel-secured trades through the CrossChainRouter.
+
+trigger:
+  type: cron
+  schedule: "*/5 * * * *"  # Every 5 minutes
+
+autonomy: 0.90
+revenue_model: "1% of arbitrage profit"
+
+handler:
+  runtime: python
+  module: handlers.arbitrage_handler
+  class: ArbitrageBreaker
+  entrypoint: run_workflow
+
+config:
+  # Supported swap pairs for arbitrage scanning
+  swap_pairs:
+    - BTC_USDC
+    - ETH_USDC
+    - BTC_ETH
+
+  # Minimum spread to consider profitable (basis points)
+  min_spread_bps: 50
+
+  # Maximum trade size in satoshis
+  max_trade_sats: 50000
+
+  # Kelly criterion fraction for position sizing
+  kelly_fraction: 0.25
+
+  # Revenue: percentage of profit per trade
+  profit_fee_pct: 1.0
+
+  # Slippage tolerance (basis points)
+  slippage_tolerance_bps: 20
+
+  # Security configuration
+  security_interface: "x402_api"
+  security_agent_id: "arbitrage_breaker_v1"
+
+steps:
+  - id: scan_price_feeds
+    name: "Scan Price Feeds"
+    description: >
+      Retrieve current prices from multiple exchanges and on-chain
+      oracles for all configured swap pairs. Calculate cross-exchange
+      spreads and identify potential arbitrage opportunities.
+    handler_method: scan_price_feeds
+    timeout_seconds: 15
+    retry:
+      max_attempts: 3
+      backoff_seconds: 3
+
+  - id: identify_spreads
+    name: "Identify Profitable Spreads"
+    description: >
+      Filter scanned prices for spreads exceeding the minimum
+      threshold (50 bps). Rank opportunities by expected profit
+      after fees and slippage. Discard stale or suspect quotes.
+    handler_method: identify_spreads
+    depends_on: [scan_price_feeds]
+    timeout_seconds: 10
+
+  - id: calculate_optimal_size
+    name: "Calculate Optimal Trade Size"
+    description: >
+      For each opportunity, apply Kelly criterion to determine
+      optimal position size given the spread, confidence, and
+      available capital. Cap at max_trade_sats per trade.
+    handler_method: calculate_optimal_size
+    depends_on: [identify_spreads]
+    condition: "opportunities_found > 0"
+    timeout_seconds: 10
+
+  - id: execute_arbitrage
+    name: "Execute Arbitrage (CaMel-Secured)"
+    description: >
+      Execute the arbitrage trades through the CaMel security
+      gateway and CrossChainRouter. Each leg of the trade is
+      individually validated with Byzantine consensus.
+    handler_method: execute_arbitrage
+    depends_on: [calculate_optimal_size]
+    security:
+      camel_validation: true
+      operation: "swap_execute"
+      consensus_required: true
+    timeout_seconds: 120
+    retry:
+      max_attempts: 2
+      backoff_seconds: 5
+
+  - id: settle_profit
+    name: "Settle Profit"
+    description: >
+      Calculate realized profit from completed arbitrage trades.
+      Deduct the 1% platform fee and transfer remaining profit
+      to the treasury. Log complete trade details for audit.
+    handler_method: settle_profit
+    depends_on: [execute_arbitrage]
+    timeout_seconds: 30
+    always_run: true
+
+notifications:
+  on_arbitrage_executed:
+    channels: [audit_log]
+    message_template: >
+      Arbitrage executed: {swap_pair} spread {spread_bps}bps,
+      profit {profit_sats} sats, fee {fee_sats} sats
+  on_error:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      Arbitrage agent error: {error_message}
+
+monitoring:
+  metrics:
+    - name: arbitrage_scans_total
+      type: counter
+      description: "Total price feed scans performed"
+    - name: arbitrage_opportunities_found
+      type: counter
+      description: "Total arbitrage opportunities identified"
+    - name: arbitrage_trades_executed
+      type: counter
+      description: "Total arbitrage trades executed"
+    - name: arbitrage_profit_sats
+      type: counter
+      description: "Total profit from arbitrage in satoshis"
+    - name: arbitrage_fees_sats
+      type: counter
+      description: "Total platform fees from arbitrage in satoshis"

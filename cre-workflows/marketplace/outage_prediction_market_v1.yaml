@@ -1,0 +1,155 @@
+# Copyright (c) 2025 Craig M. Brown. All rights reserved.
+#
+# BlindOracle Outage Prediction Market - CRE Workflow Definition
+# ===============================================================
+#
+# Automated prediction market creation for cloud infrastructure
+# outages. The agent monitors AWS, GCP, Cloudflare, and major
+# exchange status pages every 15 minutes, detects anomalies, and
+# autonomously creates prediction markets with eCash liquidity
+# seeding when outage probability exceeds threshold.
+#
+# Revenue: 0.5% of all positions in created markets.
+#
+# @requirement REQ-CRE-UC7 - Outage prediction markets
+# @requirement REQ-BLP-001 - Domain understanding (infrastructure)
+# @requirement REQ-BLP-011 - Independent decision making
+# @requirement REQ-BLP-019 - Logging and audit trail
+# @requirement REQ-BLP-021 - Continuous operation (24/7 monitoring)
+
+name: outage_prediction_market_v1
+version: "1.0.0"
+description: >
+  Autonomous outage prediction market creation. Monitors cloud
+  infrastructure status pages every 15 minutes, detects anomalies
+  via signal analysis, and creates prediction markets with eCash
+  liquidity seeding when outage probability exceeds threshold.
+
+trigger:
+  type: cron
+  schedule: "*/15 * * * *"  # Every 15 minutes
+
+autonomy: 0.99
+revenue_model: "0.5% of positions"
+
+handler:
+  runtime: python
+  module: handlers.outage_pm_handler
+  class: OutagePMAgent
+  entrypoint: run_workflow
+
+config:
+  # Infrastructure targets to monitor
+  targets:
+    - name: AWS
+      status_url: "https://status.aws.amazon.com"
+      category: cloud
+    - name: GCP
+      status_url: "https://status.cloud.google.com"
+      category: cloud
+    - name: Cloudflare
+      status_url: "https://www.cloudflarestatus.com"
+      category: cdn
+    - name: Binance
+      status_url: "https://www.binance.com/en/api-status"
+      category: exchange
+    - name: Coinbase
+      status_url: "https://status.coinbase.com"
+      category: exchange
+
+  # Anomaly detection thresholds
+  anomaly_threshold: 0.7  # Probability above which a market is created
+  signal_lookback_minutes: 60
+
+  # Market creation parameters
+  market_duration_hours: 24
+  seed_liquidity_sats: 10000
+
+  # Revenue: percentage of positions
+  position_fee_pct: 0.5
+
+  # Security configuration
+  security_interface: "x402_api"
+  security_agent_id: "outage_pm_agent_v1"
+
+steps:
+  - id: monitor_status
+    name: "Monitor Infrastructure Status"
+    description: >
+      Poll status endpoints for all configured infrastructure targets.
+      Parse response codes, latency anomalies, and reported incidents.
+      Calculate outage probability signal for each target.
+    handler_method: monitor_status
+    timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_seconds: 10
+
+  - id: create_market
+    name: "Create Prediction Market"
+    description: >
+      For targets with anomaly probability above threshold, create
+      a new prediction market with a formatted question, duration,
+      and metadata. Market creation is logged for audit.
+    handler_method: create_market
+    depends_on: [monitor_status]
+    condition: "anomalies_detected > 0"
+    timeout_seconds: 30
+
+  - id: seed_liquidity
+    name: "Seed Market Liquidity"
+    description: >
+      Seed the newly created market with initial eCash liquidity
+      from the platform treasury. Both YES and NO positions are
+      seeded to ensure market depth.
+    handler_method: seed_liquidity
+    depends_on: [create_market]
+    security:
+      camel_validation: true
+      operation: "ecash_transfer"
+    timeout_seconds: 60
+
+  - id: resolve_market
+    name: "Resolve Expired Markets"
+    description: >
+      Check for markets that have reached their deadline. Resolve
+      based on verified outage data. Distribute winnings and collect
+      the 0.5% position fee.
+    handler_method: resolve_market
+    depends_on: [monitor_status]
+    timeout_seconds: 60
+    always_run: true
+
+notifications:
+  on_market_created:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      Outage market created: {target_name} outage probability
+      {probability_pct}%, market ID {market_id}
+  on_market_resolved:
+    channels: [audit_log]
+    message_template: >
+      Outage market {market_id} resolved: {outcome},
+      pool {pool_sats} sats, fee {fee_sats} sats
+  on_error:
+    channels: [audit_log]
+    message_template: >
+      Outage PM agent error: {error_message}
+
+monitoring:
+  metrics:
+    - name: outage_scans_total
+      type: counter
+      description: "Total infrastructure status scans"
+    - name: outage_anomalies_detected
+      type: counter
+      description: "Total anomalies detected above threshold"
+    - name: outage_markets_created
+      type: counter
+      description: "Total prediction markets created"
+    - name: outage_markets_resolved
+      type: counter
+      description: "Total prediction markets resolved"
+    - name: outage_position_fees_sats
+      type: counter
+      description: "Total position fees collected in satoshis"

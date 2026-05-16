@@ -1,0 +1,79 @@
+# trading_signals/strategy_config.yaml
+# REQ-AUTORESEARCH-003b: Default strategy configuration shipped with the module
+# BLP-031: Self-Improvement — tuned parameters enable systematic strategy iteration
+#
+# Values here override the hardcoded defaults in signal_generator.load_strategy_config().
+# Edit this file to tune signal generation without changing Python code.
+# Loaded automatically by SignalGenerator when config_path is not explicitly set.
+
+# ──────────────────────────────────────────────────────────────────────
+# Signal Weights
+# Higher weight = indicator has more influence on final signal direction.
+# Default: all indicators weighted equally at 1.0.
+# BollingerBands slightly downweighted (0.8) — noisier on short price histories.
+# Momentum slightly upweighted (1.2) — prediction market momentum is a key differentiator.
+# ──────────────────────────────────────────────────────────────────────
+signal_weights:
+  RSI: 1.0
+  MACD: 1.0
+  BollingerBands: 0.8
+  momentum: 1.2
+
+# ──────────────────────────────────────────────────────────────────────
+# Signal Thresholds
+# buy_threshold / sell_threshold: weighted-average signal score cutoffs.
+#   Score > buy_threshold  → BUY signal
+#   Score < sell_threshold → SELL signal
+#   Otherwise             → HOLD
+# rsi_overbought / rsi_oversold: standard RSI thresholds (industry default: 70/30)
+# momentum_trigger: probability momentum score (−100 to +100) that adds weight
+# ──────────────────────────────────────────────────────────────────────
+thresholds:
+  buy_threshold: 0.3
+  sell_threshold: -0.3
+  rsi_overbought: 70
+  rsi_oversold: 30
+  momentum_trigger: 20
+
+# ──────────────────────────────────────────────────────────────────────
+# Position Sizing
+# Maximum fraction of portfolio to suggest for each risk tier.
+# Actual suggestion = (confidence deviation from 50%) × risk_max.
+# Conservative defaults — accuracy must exceed 55% before raising these.
+# ──────────────────────────────────────────────────────────────────────
+position_sizing:
+  high_risk_max: 0.10    # 10% max for high-confidence, high-risk signals
+  medium_risk_max: 0.05  # 5% max for medium signals
+  low_risk_max: 0.02     # 2% max for low-confidence signals
+
+# ──────────────────────────────────────────────────────────────────────
+# Stop Losses
+# Used by backtester to simulate realistic trade outcomes.
+# trailing_stop_pct: trail behind price at this percentage
+# max_loss_pct: absolute maximum loss before forced exit
+# ──────────────────────────────────────────────────────────────────────
+stops:
+  trailing_stop_pct: 0.05   # 5% trailing stop
+  max_loss_pct: 0.08        # 8% maximum loss per trade
+
+# ──────────────────────────────────────────────────────────────────────
+# Scheduler Configuration
+# Used by scripts/trading_signal_scheduler.py
+# ──────────────────────────────────────────────────────────────────────
+scheduler:
+  interval_minutes: 15
+  assets:
+    - BTC
+    - ETH
+    - LINK
+    - SOL
+  min_confidence_for_nostr: 75   # Only publish to NOSTR above this threshold
+  signal_retention_days: 90      # SQLite rolling window
+
+# ──────────────────────────────────────────────────────────────────────
+# Cross-Market Correlation
+# Settings for CrossMarketCorrelation calculations
+# ──────────────────────────────────────────────────────────────────────
+correlation:
+  window_days: 30          # Rolling window for Pearson calculation
+  min_data_points: 10      # Minimum series length to compute correlation

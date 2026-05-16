@@ -1,0 +1,155 @@
+# RQ-172: Cross-Chain Conditional Markets Workflow
+# CCIP-based conditional market resolution across chains
+
+version: "1.0"
+name: cross_chain_conditional_v1
+description: |
+  Cross-chain conditional market resolution using Chainlink CCIP.
+
+  When market resolves on source chain (e.g., Ethereum), triggers
+  conditional market on target chain (e.g., Base, Polygon).
+
+  Composition pattern: sequential market resolutions linked via CCIP.
+
+metadata:
+  workstream: BlindOracle x Qualia (RQ-172)
+  depends_on: RQ-166 (topological resolver)
+  blp_tags:
+    - BLP-025  # Durability: atomic settlement
+    - BLP-051  # Self-Organization: cross-chain composition
+    - BLP-031  # Self-Improvement: learns settlement patterns
+  created_at: "2026-04-07"
+
+phases:
+  - phase_id: "source_resolution"
+    description: "Resolve market on source chain"
+    steps:
+      - step_id: "monitor_source_market"
+        action: "monitor_market"
+        target: "source_chain"
+        config:
+          status_check_interval: 10  # seconds
+          confidence_threshold: 0.95
+
+      - step_id: "detect_resolution"
+        action: "detect_event"
+        event_type: "MarketResolved"
+        output: "resolution_event"
+
+      - step_id: "verify_resolution"
+        action: "verify_resolution"
+        input: "resolution_event"
+        config:
+          oracle_required: true
+          multi_signature: true
+
+  - phase_id: "ccip_preparation"
+    description: "Prepare CCIP message for target chain"
+    steps:
+      - step_id: "build_ccip_message"
+        action: "build_message"
+        input: "resolution_event"
+        config:
+          source_chain_selector: "chainlink_source_chain_id"
+          destination_chain_selector: "chainlink_dest_chain_id"
+          gas_limit: 200000
+
+      - step_id: "sign_message"
+        action: "sign_message"
+        algorithm: "ECDSA"
+        output: "signed_message"
+
+      - step_id: "estimate_ccip_fee"
+        action: "estimate_fee"
+        input: "signed_message"
+        output: "fee_estimate"
+
+  - phase_id: "ccip_transmission"
+    description: "Send message via Chainlink CCIP"
+    steps:
+      - step_id: "send_ccip_message"
+        action: "send_via_ccip"
+        input: "signed_message"
+        config:
+          receiver_address: "ConditionalMarketBridge.sol"
+          retry_on_failure: true
+          max_retries: 3
+
+      - step_id: "track_ccip_status"
+        action: "poll_ccip"
+        config:
+          poll_interval: 30  # seconds
+          timeout: 3600  # 1 hour
+
+  - phase_id: "target_resolution"
+    description: "Resolve conditional market on target chain"
+    steps:
+      - step_id: "receive_message"
+        action: "receive_ccip"
+        target: "target_chain"
+        input: "ccip_message"
+
+      - step_id: "validate_message"
+        action: "validate_signature"
+        config:
+          source_chain_key: true
+          replay_protection: true
+
+      - step_id: "trigger_conditional"
+        action: "create_conditional_resolution"
+        config:
+          condition_type: "source_resolved"
+          settlement_trigger: "immediate"
+
+      - step_id: "settle_conditional"
+        action: "settle_market"
+        config:
+          settlement_engine: "atomic"
+
+  - phase_id: "settlement"
+    description: "Finalize cross-chain settlement"
+    steps:
+      - step_id: "record_settlement"
+        action: "record_settlement"
+        storage: ["source_chain", "target_chain"]
+
+      - step_id: "emit_completion"
+        action: "emit_event"
+        event_type: "ConditionalMarketSettled"
+
+quality_gates:
+  - metric: "ccip_message_delivery"
+    target: "== 100%"
+  - metric: "settlement_atomicity"
+    target: "== 100%"
+  - metric: "end_to_end_latency"
+    target: "< 10 minutes"
+
+fallbacks:
+  - if: "ccip_timeout"
+    then: "retry_with_exponential_backoff"
+    max_retries: 3
+
+  - if: "target_chain_unavailable"
+    then: "defer_settlement"
+    max_defer_duration: "24 hours"
+
+  - if: "settlement_conflict"
+    then: "escalate_to_dao_vote"
+
+observability:
+  metrics:
+    - name: "ccip_messages_sent"
+      type: "counter"
+    - name: "conditional_resolutions_triggered"
+      type: "counter"
+    - name: "cross_chain_latency_ms"
+      type: "histogram"
+    - name: "settlement_success_rate"
+      type: "gauge"
+
+  alerts:
+    - condition: "ccip_delivery_failed"
+      severity: "critical"
+    - condition: "settlement_mismatch"
+      severity: "critical"

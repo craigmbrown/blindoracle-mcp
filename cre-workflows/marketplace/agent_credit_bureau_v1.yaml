@@ -1,0 +1,145 @@
+# Copyright (c) 2025 Craig M. Brown. All rights reserved.
+#
+# BlindOracle Agent Credit Bureau - CRE Workflow Definition
+# ==========================================================
+#
+# On-chain credit scoring for AI agents. When a credit report is
+# requested via API, the bureau collects the agent's pubkey,
+# queries transaction history and NIP-58 badge portfolio, then
+# calculates a composite credit score (0-1000) using weighted
+# factors: tx_history (0.35), badge_portfolio (0.25),
+# collateral_ratio (0.20), peer_reviews (0.20).
+#
+# @requirement REQ-CRE-UC4 - Agent credit scoring
+# @requirement REQ-BLP-001 - Domain understanding (credit scoring)
+# @requirement REQ-BLP-011 - Independent decision making
+# @requirement REQ-BLP-019 - Logging and audit trail
+# @requirement REQ-BLP-023 - Error recovery
+
+name: agent_credit_bureau_v1
+version: "1.0.0"
+description: >
+  On-chain credit scoring for AI agents. Collects transaction history,
+  NIP-58 badge portfolio, collateral ratios, and peer reviews to
+  produce a composite credit score (0-1000). Reports are generated
+  on demand via API request.
+
+trigger:
+  type: api_request
+  endpoint: /v1/credit/report
+  method: POST
+  auth: x402_api
+
+autonomy: 0.95
+revenue_model: "$0.50/report"
+
+handler:
+  runtime: python
+  module: handlers.credit_bureau_handler
+  class: CreditBureau
+  entrypoint: run_workflow
+
+config:
+  # Scoring factor weights (must sum to 1.0)
+  factor_weights:
+    tx_history: 0.35
+    badge_portfolio: 0.25
+    collateral_ratio: 0.20
+    peer_reviews: 0.20
+
+  # Score range
+  score_min: 0
+  score_max: 1000
+
+  # Minimum data requirements
+  min_transactions: 5
+  min_account_age_days: 30
+
+  # Revenue: fee per report
+  fee_per_report_usd: 0.50
+
+  # Security configuration
+  security_interface: "x402_api"
+  security_agent_id: "credit_bureau_v1"
+
+steps:
+  - id: collect_agent_pubkey
+    name: "Collect Agent Pubkey"
+    description: >
+      Validate the agent pubkey from the API request. Verify the
+      pubkey format, check if the agent exists on known registries,
+      and retrieve basic identity metadata.
+    handler_method: collect_agent_pubkey
+    timeout_seconds: 10
+
+  - id: query_transaction_history
+    name: "Query Transaction History"
+    description: >
+      Retrieve the agent's on-chain transaction history across
+      BTC, Lightning, and eCash rails. Calculate volume, frequency,
+      counterparty diversity, and default rate.
+    handler_method: query_transaction_history
+    depends_on: [collect_agent_pubkey]
+    timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_seconds: 5
+
+  - id: query_badge_portfolio
+    name: "Query Badge Portfolio"
+    description: >
+      Retrieve the agent's NIP-58 badge collection from Nostr relays.
+      Score badges by rarity, issuer reputation, and relevance to
+      financial services.
+    handler_method: query_badge_portfolio
+    depends_on: [collect_agent_pubkey]
+    timeout_seconds: 30
+
+  - id: calculate_composite_score
+    name: "Calculate Composite Score"
+    description: >
+      Combine all factor scores using configured weights to produce
+      the final composite credit score (0-1000). Apply normalisation,
+      calculate confidence interval, and determine credit tier
+      (Excellent/Good/Fair/Poor).
+    handler_method: calculate_composite_score
+    depends_on: [query_transaction_history, query_badge_portfolio]
+    timeout_seconds: 10
+
+  - id: generate_report
+    name: "Generate Credit Report"
+    description: >
+      Produce the final credit report with composite score, individual
+      factor breakdowns, credit tier, confidence interval, and
+      recommendations. The report is returned via API and logged
+      for audit.
+    handler_method: generate_report
+    depends_on: [calculate_composite_score]
+    timeout_seconds: 15
+    always_run: true
+
+notifications:
+  on_report_generated:
+    channels: [audit_log]
+    message_template: >
+      Credit report generated for agent {agent_pubkey_short}:
+      score {credit_score}/1000 ({credit_tier})
+  on_error:
+    channels: [audit_log]
+    message_template: >
+      Credit bureau error for agent {agent_pubkey_short}: {error_message}
+
+monitoring:
+  metrics:
+    - name: credit_reports_total
+      type: counter
+      description: "Total credit reports generated"
+    - name: credit_score_distribution
+      type: histogram
+      description: "Distribution of credit scores"
+    - name: credit_report_revenue_usd
+      type: counter
+      description: "Total revenue from credit reports in USD"
+    - name: credit_report_latency_ms
+      type: histogram
+      description: "Credit report generation latency in milliseconds"

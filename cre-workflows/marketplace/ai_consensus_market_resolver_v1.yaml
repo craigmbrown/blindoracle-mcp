@@ -1,0 +1,228 @@
+# Copyright (c) 2025 Craig M. Brown. All rights reserved.
+#
+# BlindOracle AI Consensus Market Resolver - CRE Workflow Definition
+# ===================================================================
+#
+# Multi-AI consensus engine for prediction market resolution.
+# When a market deadline is reached (detected via EVM log trigger),
+# the resolver gathers evidence from 5+ sources, queries 3+ AI
+# models for independent votes, applies Byzantine fault-tolerant
+# consensus (67% threshold), and settles the market on-chain.
+#
+# Revenue: 1% of the total settled pool is collected as a
+# resolution fee.
+#
+# This workflow is the oracle backbone of the BlindOracle platform,
+# ensuring fair and transparent market resolution with a complete
+# audit trail and anti-manipulation safeguards.
+#
+# @requirement REQ-CRE-UC6 - Multi-AI consensus market resolution
+# @requirement REQ-BLP-001 - Domain understanding (prediction markets)
+# @requirement REQ-BLP-003 - Consensus security (Byzantine fault tolerance)
+# @requirement REQ-BLP-011 - Independent decision making
+# @requirement REQ-BLP-019 - Logging and audit trail
+# @requirement REQ-BLP-023 - Error recovery
+
+name: ai_consensus_market_resolver_v1
+version: "1.0.0"
+description: >
+  Multi-AI consensus engine for trustworthy prediction market
+  resolution. Gathers evidence from 5+ independent sources,
+  queries 3+ AI models for independent votes, applies Byzantine
+  consensus (67% threshold), and settles markets on-chain with
+  a complete audit trail.
+
+trigger:
+  type: evm_log
+  contract: UnifiedPredictionSubscription
+  event: MarketDeadlineReached
+  event_signature: "MarketDeadlineReached(uint256 indexed marketId, string question, uint256 deadline)"
+  networks:
+    - sepolia
+    - base
+    - ethereum
+
+autonomy: 0.99
+revenue_model: "1% of settled pool"
+
+handler:
+  runtime: python
+  module: handlers.consensus_resolver_handler
+  class: ConsensusResolver
+  entrypoint: run_workflow
+
+config:
+  # Minimum AI models required for consensus
+  min_ai_models: 3
+
+  # Byzantine consensus threshold (67%)
+  consensus_threshold: 0.67
+
+  # Minimum evidence sources required
+  min_evidence_sources: 5
+
+  # Evidence source types
+  evidence_sources:
+    - news_api
+    - blockchain_data
+    - oracle_feed
+    - social_signal
+    - expert_opinion
+
+  # AI models for voting
+  ai_models:
+    - provider: anthropic
+      model: claude-sonnet-4-20250514
+      role: primary_analyst
+    - provider: openai
+      model: gpt-4o
+      role: cross_validator
+    - provider: google
+      model: gemini-pro
+      role: independent_judge
+
+  # Revenue: percentage of settled pool
+  resolution_fee_pct: 1.0
+
+  # Security configuration
+  security_interface: "x402_api"
+  security_agent_id: "consensus_resolver_v1"
+
+  # Sealed-vote debate for AI models (anti-front-running)
+  enable_sealed_votes: true
+
+steps:
+  - id: detect_deadline
+    name: "Detect Market Deadline"
+    description: >
+      Triggered by the MarketDeadlineReached EVM log event.
+      Decode the market ID, question, and deadline from the
+      event data. Verify the market is in a resolvable state.
+    handler_method: detect_deadline
+    timeout_seconds: 15
+
+  - id: gather_evidence
+    name: "Gather Evidence"
+    description: >
+      Collect evidence from 5+ independent sources: news APIs,
+      blockchain data feeds, oracle price feeds, social signals,
+      and expert opinions. Each source is scored for reliability
+      and relevance.
+    handler_method: gather_evidence
+    depends_on: [detect_deadline]
+    timeout_seconds: 60
+    retry:
+      max_attempts: 3
+      backoff_seconds: 10
+
+  - id: multi_ai_vote
+    name: "Multi-AI Voting"
+    description: >
+      Query 3+ AI models independently for their resolution
+      vote (YES/NO/ABSTAIN). Each model receives the same
+      evidence package and returns a structured vote with
+      confidence score, evidence summary, and reasoning.
+      Votes are sealed to prevent front-running.
+    handler_method: multi_ai_vote
+    depends_on: [gather_evidence]
+    timeout_seconds: 90
+    retry:
+      max_attempts: 2
+      backoff_seconds: 15
+    security:
+      sealed_votes: true
+      anti_front_running: true
+
+  - id: byzantine_consensus
+    name: "Byzantine Consensus"
+    description: >
+      Apply Byzantine fault-tolerant consensus to the AI votes.
+      Requires 67% agreement among models. If consensus is not
+      reached, the market enters a dispute state for manual
+      review. Uses the ByzantineConsensusEngine pattern from
+      the security gateway.
+    handler_method: byzantine_consensus
+    depends_on: [multi_ai_vote]
+    timeout_seconds: 15
+
+  - id: settle_market
+    name: "Settle Market On-Chain"
+    description: >
+      Call the on-chain settlement function with the consensus
+      outcome. The transaction is CaMel-secured and requires
+      Byzantine consensus from the security gateway validators
+      in addition to the AI consensus.
+    handler_method: settle_market
+    depends_on: [byzantine_consensus]
+    condition: "consensus_reached == true"
+    security:
+      camel_validation: true
+      operation: "settle_market"
+      consensus_required: true
+    timeout_seconds: 60
+    retry:
+      max_attempts: 2
+      backoff_seconds: 10
+
+  - id: distribute_winnings
+    name: "Distribute Winnings"
+    description: >
+      Process payout distribution to winning positions via eCash.
+      Collect 1% resolution fee from the total pool. Winnings
+      are minted as eCash tokens for privacy-preserving withdrawal.
+    handler_method: distribute_winnings
+    depends_on: [settle_market]
+    security:
+      camel_validation: true
+      operation: "ecash_mint"
+    timeout_seconds: 120
+
+  - id: audit_log
+    name: "Audit Log"
+    description: >
+      Write a complete audit trail including: market details,
+      evidence gathered, AI votes with reasoning, consensus
+      result, settlement transaction, payout distribution,
+      and fees collected. The audit log is immutable and
+      available for dispute resolution.
+    handler_method: audit_log
+    depends_on: [distribute_winnings]
+    timeout_seconds: 15
+    always_run: true  # Log audit even on failure
+
+notifications:
+  on_resolution:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      Market {market_id} resolved: {outcome} with {consensus_pct}%
+      consensus. Pool: {pool_sats} sats, Fee: {fee_sats} sats
+  on_dispute:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      Market {market_id} DISPUTED: consensus not reached
+      ({consensus_pct}% < 67%). Manual review required.
+  on_error:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      Consensus resolver error for market {market_id}: {error_message}
+
+monitoring:
+  metrics:
+    - name: markets_resolved_total
+      type: counter
+      description: "Total markets successfully resolved"
+    - name: markets_disputed_total
+      type: counter
+      description: "Total markets entering dispute state"
+    - name: resolution_consensus_pct
+      type: histogram
+      description: "Distribution of consensus percentages"
+    - name: resolution_fees_sats
+      type: counter
+      description: "Total resolution fees collected in satoshis"
+    - name: evidence_sources_per_resolution
+      type: histogram
+      description: "Number of evidence sources per resolution"
+    - name: ai_vote_confidence
+      type: histogram
+      description: "Distribution of AI model vote confidence scores"

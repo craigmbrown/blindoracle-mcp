@@ -1,0 +1,145 @@
+# Copyright (c) 2025 Craig M. Brown. All rights reserved.
+#
+# BlindOracle Compliance Swarm - CRE Workflow Definition
+# =======================================================
+#
+# RWA compliance screening for prediction markets. When a new
+# market is created (MarketCreated event), the swarm extracts
+# metadata, checks sanctions lists, runs KYC-light, and executes
+# a 4-agent debate (Compliance + Risk + Legal + Devil's Advocate).
+#
+# @requirement REQ-CRE-UC2 - RWA compliance screening
+# @requirement REQ-BLP-001 - Domain understanding (compliance)
+# @requirement REQ-BLP-003 - Consensus security (4-agent debate)
+# @requirement REQ-BLP-011 - Independent decision making
+# @requirement REQ-BLP-019 - Logging and audit trail
+
+name: compliance_screening_v1
+version: "1.0.0"
+description: >
+  RWA compliance screening for prediction markets. Extracts market
+  metadata, checks sanctions lists, runs KYC-light on the creator,
+  and executes a 4-agent compliance debate with 67% threshold.
+
+trigger:
+  type: evm_log
+  contract: UnifiedPredictionSubscription
+  event: MarketCreated
+  event_signature: "MarketCreated(uint256 indexed marketId, string question, address creator)"
+  networks:
+    - sepolia
+    - base
+
+autonomy: 0.85
+revenue_model: "$5/check, $99/mo subscription"
+
+handler:
+  runtime: python
+  module: handlers.compliance_handler
+  class: ComplianceSwarm
+  entrypoint: run_workflow
+
+config:
+  sanctions_lists:
+    - OFAC_SDN
+    - EU_SANCTIONS
+    - UN_CONSOLIDATED
+    - UK_HMT
+
+  kyc_light_fields:
+    - agent_pubkey
+    - jurisdiction
+    - entity_type
+    - creation_date
+
+  debate_threshold: 0.67
+  fee_per_check_usd: 5.0
+  subscription_monthly_usd: 99.0
+
+  security_interface: "x402_api"
+  security_agent_id: "compliance_swarm_v1"
+
+steps:
+  - id: extract_metadata
+    name: "Extract Market Metadata"
+    description: >
+      Extract and classify the market question, detect RWA involvement,
+      identify jurisdiction hints, and categorize the market type.
+    handler_method: extract_metadata
+    timeout_seconds: 15
+
+  - id: check_sanctions
+    name: "Sanctions Check"
+    description: >
+      Check the market creator against OFAC SDN, EU, UN, and UK
+      sanctions lists. Flag any potential matches.
+    handler_method: check_sanctions
+    depends_on: [extract_metadata]
+    timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_seconds: 5
+
+  - id: run_kyc_light
+    name: "KYC-Light Screening"
+    description: >
+      Run KYC-light screening on the creator agent. Verify identity
+      proofs, account age, and verification level.
+    handler_method: run_kyc_light
+    depends_on: [extract_metadata]
+    timeout_seconds: 30
+
+  - id: compliance_debate
+    name: "4-Agent Compliance Debate"
+    description: >
+      Execute a structured debate with 4 specialized agents:
+      Compliance Officer, Risk Analyst, Legal Advisor, and
+      Devil's Advocate. Requires 67% consensus for approval.
+    handler_method: run_compliance_debate
+    depends_on: [check_sanctions, run_kyc_light]
+    timeout_seconds: 60
+    security:
+      debate_consensus: true
+      threshold: 0.67
+
+  - id: issue_verdict
+    name: "Issue Compliance Verdict"
+    description: >
+      Determine final compliance verdict based on debate outcome.
+      Issue clearance (approved), denial, or escalation to founder.
+    handler_method: issue_verdict
+    depends_on: [compliance_debate]
+    timeout_seconds: 15
+    always_run: true
+
+notifications:
+  on_approval:
+    channels: [audit_log]
+    message_template: >
+      Market {market_id} compliance approved: consensus {consensus_pct}%
+  on_denial:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      Market {market_id} compliance DENIED: {verdict_reason}
+  on_escalation:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      Market {market_id} ESCALATED to founder for review
+
+monitoring:
+  metrics:
+    - name: compliance_checks_total
+      type: counter
+      description: "Total compliance checks performed"
+    - name: compliance_approvals_total
+      type: counter
+      description: "Total markets approved"
+    - name: compliance_denials_total
+      type: counter
+      description: "Total markets denied"
+    - name: compliance_escalations_total
+      type: counter
+      description: "Total markets escalated"
+    - name: compliance_revenue_usd
+      type: counter
+      description: "Total compliance revenue in USD"

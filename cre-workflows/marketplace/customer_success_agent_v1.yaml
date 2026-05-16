@@ -1,0 +1,167 @@
+# Copyright (c) 2025 Craig M. Brown. All rights reserved.
+#
+# BlindOracle Customer Success Agent - CRE Workflow Definition
+# ==============================================================
+#
+# Proactive customer success management for marketplace subscribers.
+# Runs daily at 00:00 UTC to analyze usage patterns, calculate
+# agent health scores, generate personalised recommendations,
+# send retention notifications, and track conversion metrics.
+#
+# Churn risk is classified as LOW/MEDIUM/HIGH/CRITICAL based on
+# usage frequency, feature adoption, and engagement trends.
+#
+# @requirement REQ-CRE-UC10 - Customer success automation
+# @requirement REQ-BLP-001 - Domain understanding (customer success)
+# @requirement REQ-BLP-011 - Independent decision making
+# @requirement REQ-BLP-019 - Logging and audit trail
+# @requirement REQ-BLP-031 - Self-improvement (recommendation tuning)
+
+name: customer_success_agent_v1
+version: "1.0.0"
+description: >
+  Proactive customer success management for marketplace subscribers.
+  Analyzes usage patterns daily, calculates agent health scores,
+  generates personalised recommendations, sends retention
+  notifications, and tracks conversion metrics.
+
+trigger:
+  type: cron
+  schedule: "0 0 * * *"  # Daily at 00:00 UTC
+
+autonomy: 0.99
+revenue_model: "$49/mo subscription"
+
+handler:
+  runtime: python
+  module: handlers.customer_success_handler
+  class: CustomerSuccessAgent
+  entrypoint: run_workflow
+
+config:
+  # Churn risk thresholds
+  churn_thresholds:
+    low: 0.2       # Below 20% churn probability
+    medium: 0.4    # 20-40% churn probability
+    high: 0.6      # 40-60% churn probability
+    critical: 1.0  # Above 60% churn probability
+
+  # Health score weights
+  health_weights:
+    usage_frequency: 0.30
+    feature_adoption: 0.25
+    engagement_trend: 0.25
+    support_interactions: 0.20
+
+  # Notification configuration
+  notification_channels:
+    low: [audit_log]
+    medium: [audit_log]
+    high: [audit_log, whatsapp]
+    critical: [audit_log, whatsapp]
+
+  # Recommendation types
+  recommendation_types:
+    - feature_discovery
+    - usage_optimisation
+    - upgrade_suggestion
+    - engagement_boost
+
+  # Revenue: subscription fee per month
+  subscription_monthly_usd: 49.0
+
+  # Data store path
+  subscriber_store: "data/customer_success_data.json"
+
+  # Security configuration
+  security_interface: "x402_api"
+  security_agent_id: "customer_success_v1"
+
+steps:
+  - id: analyze_usage
+    name: "Analyze Usage Patterns"
+    description: >
+      Retrieve usage data for all active subscribers. Calculate
+      usage frequency, feature adoption rate, session duration
+      trends, and engagement metrics over the past 30 days.
+    handler_method: analyze_usage
+    timeout_seconds: 30
+
+  - id: calculate_health_scores
+    name: "Calculate Health Scores"
+    description: >
+      Compute weighted health scores for each subscriber using
+      configured factor weights. Classify churn risk level
+      (LOW/MEDIUM/HIGH/CRITICAL) based on score thresholds.
+    handler_method: calculate_health_scores
+    depends_on: [analyze_usage]
+    timeout_seconds: 15
+
+  - id: generate_recommendations
+    name: "Generate Recommendations"
+    description: >
+      For each subscriber, generate personalised recommendations
+      based on their health score and usage patterns. Types include
+      feature discovery, usage optimisation, upgrade suggestions,
+      and engagement boosts.
+    handler_method: generate_recommendations
+    depends_on: [calculate_health_scores]
+    timeout_seconds: 30
+
+  - id: send_notifications
+    name: "Send Retention Notifications"
+    description: >
+      Send notifications to subscribers based on their churn risk
+      level. Critical risk subscribers get immediate WhatsApp
+      outreach. High risk get targeted recommendations.
+    handler_method: send_notifications
+    depends_on: [generate_recommendations]
+    timeout_seconds: 30
+
+  - id: track_conversions
+    name: "Track Conversion Metrics"
+    description: >
+      Record all customer success metrics for the run. Track
+      recommendation acceptance rates, churn prevention success,
+      and revenue impact. Update historical trends.
+    handler_method: track_conversions
+    depends_on: [send_notifications]
+    timeout_seconds: 15
+    always_run: true
+
+notifications:
+  on_critical_churn:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      CRITICAL churn risk: {subscriber_count} subscribers at risk,
+      potential revenue loss ${revenue_at_risk}/mo
+  on_summary:
+    channels: [audit_log]
+    message_template: >
+      Customer success daily: {total_subscribers} subscribers,
+      {healthy_pct}% healthy, {recommendations_sent} recommendations sent
+  on_error:
+    channels: [audit_log]
+    message_template: >
+      Customer success agent error: {error_message}
+
+monitoring:
+  metrics:
+    - name: subscribers_total
+      type: gauge
+      description: "Total active subscribers"
+    - name: subscribers_healthy
+      type: gauge
+      description: "Subscribers with LOW churn risk"
+    - name: subscribers_at_risk
+      type: gauge
+      description: "Subscribers with HIGH or CRITICAL churn risk"
+    - name: recommendations_sent_total
+      type: counter
+      description: "Total recommendations sent"
+    - name: churn_prevented_total
+      type: counter
+      description: "Total successful churn prevention actions"
+    - name: customer_success_revenue_usd
+      type: counter
+      description: "Total subscription revenue in USD"

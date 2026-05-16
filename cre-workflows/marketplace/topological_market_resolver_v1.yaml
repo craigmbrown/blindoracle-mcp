@@ -1,0 +1,163 @@
+# CRE Workflow: Topological Market Resolver — RQ-166
+# UC11 — Market resolution propagation via correlation graph
+#
+# Trigger: Resolved market detected in active_markets.json (cron-based MVP)
+# Future: EVM log MarketResolved event on UnifiedPredictionSubscription
+#
+# Architecture:
+#   1. Load market correlation graph
+#   2. Propagate confidence via exponential decay BFS (max 3 hops)
+#   3. Organize affected markets by hop distance (parallel execution layers)
+#   4. Update active_markets.json with new resolver_confidence values
+#   5. Emit ProofDB kind 30015 events
+#   6. Audit log all changes
+#
+# @requirement REQ-RQ166-013 — CRE workflow definition
+# BLP: Alignment (BLP-001), Self-Organization (BLP-051)
+# Resende Concept: Specialization Order, Composition
+
+name: topological_market_resolver_v1
+version: "1.0.0"
+description: "Resolves prediction markets topologically with confidence propagation"
+
+metadata:
+  workstream: "BlindOracle RQ-166"
+  rq: RQ-166
+  blp_tags:
+    - BLP-001
+    - BLP-011
+    - BLP-015
+    - BLP-026
+    - BLP-031
+    - BLP-035
+    - BLP-051
+  created_at: "2026-04-27"
+
+trigger:
+  type: webhook
+  path: /cre/topological-market-resolver
+  # Future: EVM event trigger on MarketResolved
+
+config:
+  decay_lambda: 0.5              # e^(-0.5 * d) exponential decay
+  max_hops: 3                    # Maximum propagation distance
+  min_correlation_weight: 0.1    # Filter weak correlations
+  enable_proof_emission: true    # Emit ProofDB kind 30015 events
+
+autonomy: 0.95                   # High autonomy: minimal human intervention
+
+phases:
+  - phase_id: "load_and_propagate"
+    description: "Load market correlation graph and propagate confidence signals"
+    steps:
+      # Step 1: Load graph and detect resolution
+      - step_id: load_graph
+        action: http_request
+        config:
+          method: GET
+          url: "${API_ENDPOINT}/v2/market-graph"
+          timeout: 5000
+        description: "Load market correlation graph from persistent storage"
+
+      # Step 2: Propagate confidence signals through graph
+      - step_id: propagate_confidence
+        action: compute
+        depends_on: [load_graph]
+        handler:
+          module: services.market_graph.propagator
+          class: ConfidencePropagator
+          method: propagate
+          params:
+            graph: "{{ steps.load_graph.output }}"
+            root_market_id: "{{ trigger.market_id }}"
+            root_confidence: "{{ trigger.confidence }}"
+            max_hops: "{{ config.max_hops }}"
+        description: "Propagate confidence via BFS with exponential decay"
+
+  - phase_id: "plan_and_execute"
+    description: "Plan resolution workflow and execute parallel layer updates"
+    steps:
+      # Step 3: Organize markets by hop distance for parallel execution
+      - step_id: plan_resolution_workflow
+        action: compute
+        depends_on: [propagate_confidence]
+        handler:
+          module: services.market_graph.resolver
+          class: TopologicalMarketResolver
+          method: build_resolution_workflow
+          params:
+            market_id: "{{ trigger.market_id }}"
+            outcome: "{{ trigger.outcome }}"
+            confidence: "{{ trigger.confidence }}"
+        description: "Organize affected markets into parallel execution layers"
+
+      # Step 4: Execute parallel updates (one layer per hop distance)
+      # Layer 0: Direct neighbors (hop 1)
+      - step_id: update_layer_0
+        action: batch_update
+        depends_on: [plan_resolution_workflow]
+        for_each: "{{ steps.plan_resolution_workflow.output.layers[0] }}"
+        config:
+          target_market: "{{ item }}"
+          new_confidence: "{{ steps.propagate_confidence.output[item].propagated_confidence }}"
+        description: "Update hop-1 neighbors in parallel"
+
+      # Layer 1: Hop-2 neighbors
+      - step_id: update_layer_1
+        action: batch_update
+        depends_on: [update_layer_0]
+        for_each: "{{ steps.plan_resolution_workflow.output.layers[1] }}"
+        config:
+          target_market: "{{ item }}"
+          new_confidence: "{{ steps.propagate_confidence.output[item].propagated_confidence }}"
+        description: "Update hop-2 neighbors in parallel"
+
+      # Layer 2: Hop-3 neighbors
+      - step_id: update_layer_2
+        action: batch_update
+        depends_on: [update_layer_1]
+        for_each: "{{ steps.plan_resolution_workflow.output.layers[2] }}"
+        config:
+          target_market: "{{ item }}"
+          new_confidence: "{{ steps.propagate_confidence.output[item].propagated_confidence }}"
+        description: "Update hop-3 neighbors in parallel"
+
+  - phase_id: "emit_and_audit"
+    description: "Emit ProofDB events and finalize audit log"
+    steps:
+      # Step 5: Emit ProofDB events for audit trail
+      - step_id: emit_proofs
+        action: compute
+        depends_on: [update_layer_2]
+        handler:
+          module: services.market_graph.resolver
+          class: TopologicalMarketResolver
+          method: emit_proof
+          params:
+            resolved_market_id: "{{ trigger.market_id }}"
+            outcome: "{{ trigger.outcome }}"
+            root_confidence: "{{ trigger.confidence }}"
+            propagation_map: "{{ steps.propagate_confidence.output }}"
+        description: "Emit ProofOfResolution (kind 30015) to ProofDB"
+
+      # Step 6: Audit and finalize
+      - step_id: audit_log
+        action: log
+        depends_on: [emit_proofs]
+        config:
+          level: INFO
+          message: |
+            RQ-166: Market resolution complete
+            Resolved: {{ trigger.market_id }} (outcome={{ trigger.outcome }}, conf={{ trigger.confidence }})
+            Affected: {{ steps.plan_resolution_workflow.output.total_markets }} markets across 3 hops
+            Status: success
+        always_run: true
+        description: "Log resolution summary for observability"
+
+output:
+  status: "{{ steps.audit_log.status }}"
+  resolved_market_id: "{{ trigger.market_id }}"
+  outcome: "{{ trigger.outcome }}"
+  affected_markets: "{{ steps.plan_resolution_workflow.output.total_markets }}"
+  propagation_map: "{{ steps.propagate_confidence.output }}"
+  proof_ids: "{{ steps.emit_proofs.output.proof_ids }}"

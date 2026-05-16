@@ -1,0 +1,154 @@
+# Copyright (c) 2025 Craig M. Brown. All rights reserved.
+#
+# BlindOracle Autonomous Treasury Agent - CRE Workflow Definition
+# ================================================================
+#
+# Automated treasury management with periodic rebalancing across
+# BTC, ETH, USDC, and eCash rails. The agent monitors portfolio
+# drift against target allocations and executes trades via the
+# CrossChainRouter when drift exceeds a configurable threshold.
+#
+# All execution is gated through CaMel 4-layer security:
+#   Layer 1: Rate limiting + input sanitization
+#   Layer 2: Byzantine consensus (67%/80% for high-value)
+#   Layer 3: Anti-persuasion detection
+#   Layer 4: Authority validation + audit trail
+#
+# @requirement REQ-CRE-UC1 - Autonomous treasury management
+# @requirement REQ-BLP-001 - Domain understanding (portfolio management)
+# @requirement REQ-BLP-011 - Independent decision making
+# @requirement REQ-BLP-019 - Logging and audit trail
+# @requirement REQ-BLP-023 - Error recovery
+
+name: autonomous_treasury_v1
+version: "1.0.0"
+description: >
+  Automated treasury management with rebalancing across BTC, ETH,
+  USDC, and eCash. Monitors allocation drift every 4 hours and
+  executes CaMel-secured rebalancing trades when drift exceeds
+  the configured threshold.
+
+trigger:
+  type: cron
+  schedule: "0 */4 * * *"  # Every 4 hours
+
+autonomy: 0.95
+revenue_model: "0.1% rebalance fee on each trade"
+
+handler:
+  runtime: python
+  module: handlers.treasury_handler
+  class: TreasuryAgent
+  entrypoint: run_workflow
+
+config:
+  # Target allocation percentages (must sum to 100)
+  target_allocations:
+    BTC: 40
+    ETH: 30
+    USDC: 20
+    eCash: 10
+
+  # Drift threshold to trigger rebalancing (percentage points)
+  rebalance_threshold_pct: 5
+
+  # Maximum single trade size in satoshis
+  max_single_trade_sats: 10000
+
+  # Revenue: fee percentage on each rebalance trade
+  rebalance_fee_pct: 0.1
+
+  # Security: CaMel gateway interface for all execution
+  security_interface: "x402_api"
+  security_agent_id: "treasury_agent_v1"
+
+steps:
+  - id: monitor_balances
+    name: "Monitor Balances"
+    description: >
+      Retrieve current balances across all payment rails (BTC, ETH,
+      USDC, eCash, Lightning) via the CrossChainRouter.
+    handler_method: monitor_balances
+    timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_seconds: 5
+
+  - id: analyze_allocation
+    name: "Analyze Allocation"
+    description: >
+      Compare current allocation percentages against target allocations.
+      Calculate drift for each asset and determine if rebalancing is
+      needed (drift > threshold for any asset).
+    handler_method: analyze_allocation
+    depends_on: [monitor_balances]
+    timeout_seconds: 10
+
+  - id: propose_rebalance
+    name: "Propose Rebalance"
+    description: >
+      If drift exceeds threshold, generate a rebalance trade plan.
+      Each trade specifies the swap pair, direction, and amount.
+      Trades are sized to bring allocations back to target, capped
+      at max_single_trade_sats per trade.
+    handler_method: propose_rebalance
+    depends_on: [analyze_allocation]
+    condition: "drift_detected == true"
+    timeout_seconds: 15
+
+  - id: execute_if_threshold_met
+    name: "Execute Rebalance (CaMel-Secured)"
+    description: >
+      Execute the proposed trades through the CaMel security gateway.
+      Each trade is wrapped in a SecurityRequest and must pass all
+      4 layers before execution via CrossChainRouter. A 0.1%
+      rebalance fee is collected on each trade.
+    handler_method: execute_rebalance
+    depends_on: [propose_rebalance]
+    condition: "rebalance_plan is not empty"
+    security:
+      camel_validation: true
+      operation: "swap_execute"
+      consensus_required: true
+    timeout_seconds: 120
+    retry:
+      max_attempts: 2
+      backoff_seconds: 10
+
+  - id: report
+    name: "Generate Report"
+    description: >
+      Generate a performance report including current allocations,
+      trades executed, fees collected, portfolio P&L, and allocation
+      chart data. Report is logged and optionally sent via
+      notification channels.
+    handler_method: generate_report
+    depends_on: [execute_if_threshold_met]
+    timeout_seconds: 15
+    always_run: true  # Generate report even if no rebalance was needed
+
+notifications:
+  on_rebalance:
+    channels: [audit_log]
+    message_template: >
+      Treasury rebalanced: {trades_count} trades executed,
+      {total_volume_sats} sats volume, {fees_collected_sats} sats fees
+  on_error:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      Treasury agent error at step {step_id}: {error_message}
+
+monitoring:
+  metrics:
+    - name: portfolio_drift_pct
+      type: gauge
+      description: "Maximum allocation drift percentage"
+    - name: rebalance_trades_total
+      type: counter
+      description: "Total rebalance trades executed"
+    - name: fees_collected_sats
+      type: counter
+      description: "Total fees collected in satoshis"
+    - name: portfolio_value_sats
+      type: gauge
+      description: "Total portfolio value in satoshi equivalent"

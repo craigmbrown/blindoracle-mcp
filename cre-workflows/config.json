@@ -1,0 +1,40 @@
+{
+  "name": "oracle-subscription-workflow",
+  "version": "1.0.0",
+  "description": "Chainlink CRE workflow for Oracle API subscription management",
+
+  "subscriptionContract": "0x0000000000000000000000000000000000000000",
+  "usdcToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "usdtToken": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+  "daiToken": "0x6B175474E89094C44Da98b954EesadDFE44B4106D",
+  "linkToken": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+
+  "network": "ethereum",
+  "rpcUrl": "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY",
+
+  "autoRenewalSchedule": "0 0 * * *",
+  "monthlyResetSchedule": "0 0 1 * *",
+
+  "apiBaseUrl": "https://api.example.com",
+
+  "deployment": {
+    "testnet": {
+      "network": "sepolia",
+      "subscriptionContract": "0x0000000000000000000000000000000000000000",
+      "usdcToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "rpcUrl": "https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY"
+    },
+    "base": {
+      "network": "base",
+      "subscriptionContract": "0x0000000000000000000000000000000000000000",
+      "usdcToken": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "rpcUrl": "https://mainnet.base.org"
+    },
+    "arbitrum": {
+      "network": "arbitrum",
+      "subscriptionContract": "0x0000000000000000000000000000000000000000",
+      "usdcToken": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      "rpcUrl": "https://arb1.arbitrum.io/rpc"
+    }
+  }
+}

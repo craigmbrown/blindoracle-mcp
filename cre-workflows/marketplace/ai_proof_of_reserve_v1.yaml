@@ -1,0 +1,177 @@
+# Copyright (c) 2025 Craig M. Brown. All rights reserved.
+#
+# BlindOracle AI Proof-of-Reserve - CRE Workflow Definition
+# ===========================================================
+#
+# Cryptographic proof-of-reserve auditing for the eCash mint.
+# Runs hourly to sum outstanding liabilities (minted eCash tokens),
+# query on-chain reserves (BTC + Lightning + federation), calculate
+# the reserve ratio, publish a Merkle-root proof, and mint a
+# NIP-58 witness badge as on-chain attestation.
+#
+# Also supports on-demand challenges via API at $1 per challenge.
+#
+# @requirement REQ-CRE-UC9 - Proof-of-reserve auditing
+# @requirement REQ-BLP-001 - Domain understanding (reserve auditing)
+# @requirement REQ-BLP-003 - Consensus security (Merkle proofs)
+# @requirement REQ-BLP-011 - Independent decision making
+# @requirement REQ-BLP-019 - Logging and audit trail
+# @requirement REQ-BLP-021 - Continuous operation (hourly)
+
+name: ai_proof_of_reserve_v1
+version: "1.0.0"
+description: >
+  Cryptographic proof-of-reserve auditing for the eCash mint.
+  Sums outstanding liabilities, queries on-chain reserves via
+  CrossChainRouter, calculates the reserve ratio, publishes a
+  Merkle-root proof, and mints a NIP-58 witness badge. Runs
+  hourly with $1/challenge on-demand support.
+
+trigger:
+  type: cron
+  schedule: "0 * * * *"  # Every hour
+  additional_triggers:
+    - type: api_request
+      endpoint: /v1/reserve/challenge
+      method: POST
+      auth: x402_api
+
+autonomy: 0.99
+revenue_model: "$1/challenge"
+
+handler:
+  runtime: python
+  module: handlers.proof_of_reserve_handler
+  class: ProofOfReserve
+  entrypoint: run_workflow
+
+config:
+  # Reserve sources to query
+  reserve_sources:
+    - name: btc_onchain
+      type: utxo
+      chain: bitcoin
+    - name: lightning_channels
+      type: channel_balance
+      chain: lightning
+    - name: federation_balance
+      type: fedimint_balance
+      chain: fedimint
+
+  # Liability sources
+  liability_sources:
+    - name: ecash_outstanding
+      type: ecash_tokens
+      mint: primary
+
+  # Minimum acceptable reserve ratio
+  min_reserve_ratio: 1.0  # 100% backed
+
+  # NIP-58 badge configuration
+  badge_issuer: "blindoracle_auditor"
+  badge_name: "Proof-of-Reserve Witness"
+  badge_relay: "wss://relay.blindoracle.io"
+
+  # Revenue: fee per on-demand challenge
+  fee_per_challenge_usd: 1.0
+
+  # Security configuration
+  security_interface: "x402_api"
+  security_agent_id: "proof_of_reserve_v1"
+
+steps:
+  - id: sum_liabilities
+    name: "Sum Outstanding Liabilities"
+    description: >
+      Query the eCash mint for all outstanding tokens. Calculate
+      total liability in satoshis. Record token denominations and
+      issuance timestamps for Merkle tree construction.
+    handler_method: sum_liabilities
+    timeout_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_seconds: 5
+
+  - id: query_reserves
+    name: "Query On-Chain Reserves"
+    description: >
+      Query BTC on-chain UTXOs, Lightning channel balances, and
+      Fedimint federation balance via the CrossChainRouter. Sum
+      total reserves in satoshis.
+    handler_method: query_reserves
+    depends_on: [sum_liabilities]
+    timeout_seconds: 60
+    retry:
+      max_attempts: 3
+      backoff_seconds: 10
+
+  - id: calculate_ratio
+    name: "Calculate Reserve Ratio"
+    description: >
+      Compute reserves/liabilities ratio. Flag if below minimum
+      threshold (100%). Calculate individual source contributions
+      and identify any single points of failure.
+    handler_method: calculate_ratio
+    depends_on: [query_reserves]
+    timeout_seconds: 10
+
+  - id: publish_proof
+    name: "Publish Cryptographic Proof"
+    description: >
+      Construct a Merkle tree from liability tokens and reserve
+      UTXOs. Publish the Merkle root hash with timestamp and
+      digital signature. Store proof for external verification.
+    handler_method: publish_proof
+    depends_on: [calculate_ratio]
+    timeout_seconds: 30
+    security:
+      camel_validation: true
+      operation: "proof_publish"
+
+  - id: mint_witness_badge
+    name: "Mint NIP-58 Witness Badge"
+    description: >
+      Mint a NIP-58 badge on Nostr attesting to the reserve ratio
+      and Merkle root. The badge serves as a publicly verifiable
+      on-chain attestation of solvency.
+    handler_method: mint_witness_badge
+    depends_on: [publish_proof]
+    timeout_seconds: 30
+    always_run: true
+
+notifications:
+  on_proof_published:
+    channels: [audit_log]
+    message_template: >
+      Proof-of-reserve published: ratio {reserve_ratio}x,
+      reserves {reserves_sats} sats, liabilities {liabilities_sats} sats
+  on_undercollateralised:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      CRITICAL: Reserve ratio {reserve_ratio}x below minimum 1.0x!
+      Reserves {reserves_sats} sats < Liabilities {liabilities_sats} sats
+  on_error:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      Proof-of-reserve error: {error_message}
+
+monitoring:
+  metrics:
+    - name: reserve_audits_total
+      type: counter
+      description: "Total reserve audits completed"
+    - name: reserve_ratio
+      type: gauge
+      description: "Current reserve ratio (reserves/liabilities)"
+    - name: reserve_total_sats
+      type: gauge
+      description: "Total reserves in satoshis"
+    - name: liability_total_sats
+      type: gauge
+      description: "Total liabilities in satoshis"
+    - name: reserve_challenge_revenue_usd
+      type: counter
+      description: "Total revenue from on-demand challenges in USD"
+    - name: witness_badges_minted
+      type: counter
+      description: "Total NIP-58 witness badges minted"

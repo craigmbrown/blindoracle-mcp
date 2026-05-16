@@ -1,0 +1,168 @@
+# Copyright (c) 2025 Craig M. Brown. All rights reserved.
+#
+# BlindOracle System Health Monitor - CRE Workflow Definition
+# =============================================================
+#
+# Platform-wide health monitoring for the BlindOracle ecosystem.
+# Checks critical service ports (x402: 8402, eCash mint: 8443,
+# federation: 18790), Lightning node availability, federation
+# peer connectivity, and CaMel security gateway status.
+#
+# Alerts are classified by severity (INFO/WARNING/CRITICAL/EMERGENCY)
+# and auto-restart is attempted for recoverable failures.
+#
+# @requirement REQ-CRE-UC8 - System health monitoring
+# @requirement REQ-BLP-001 - Domain understanding (infrastructure)
+# @requirement REQ-BLP-021 - Continuous operation (24/7)
+# @requirement REQ-BLP-023 - Error recovery (auto-restart)
+# @requirement REQ-BLP-019 - Logging and audit trail
+
+name: system_health_monitor_v1
+version: "1.0.0"
+description: >
+  Platform-wide health monitoring for the BlindOracle ecosystem.
+  Checks service ports, federation peers, Lightning nodes, and
+  CaMel security gateway every 2 minutes. Classifies alerts by
+  severity and attempts auto-restart for recoverable failures.
+
+trigger:
+  type: cron
+  schedule: "*/5 * * * *"  # Every 5 minutes (reduced from */2 per operator approval Q-agent-spawner-agent-2)
+
+autonomy: 0.85
+revenue_model: "$99/mo platform subscription"
+
+handler:
+  runtime: python
+  module: handlers.health_monitor_handler
+  class: HealthMonitor
+  entrypoint: run_workflow
+
+config:
+  # Service ports to monitor
+  service_ports:
+    x402_api: 8402
+    ecash_mint: 8443
+    federation_gateway: 18790
+
+  # Health check targets
+  health_checks:
+    - name: x402_api
+      url: "http://localhost:8402/health"
+      critical: true
+    - name: ecash_mint
+      url: "http://localhost:8443/health"
+      critical: true
+    - name: federation_gateway
+      url: "http://localhost:18790/health"
+      critical: true
+    - name: lightning_node
+      check_type: "lnd_rpc"
+      critical: true
+
+  # Alert thresholds
+  response_timeout_ms: 5000
+  consecutive_failures_warning: 2
+  consecutive_failures_critical: 5
+
+  # Auto-restart configuration
+  auto_restart_enabled: true
+  max_restart_attempts: 3
+
+  # Revenue: included in platform subscription
+  subscription_monthly_usd: 99.0
+
+  # Security configuration
+  security_interface: "x402_api"
+  security_agent_id: "health_monitor_v1"
+
+steps:
+  - id: check_service_ports
+    name: "Check Service Ports"
+    description: >
+      TCP connectivity check on all configured service ports
+      (x402: 8402, eCash: 8443, Federation: 18790). Record
+      response time and availability status.
+    handler_method: check_service_ports
+    timeout_seconds: 15
+
+  - id: check_federation
+    name: "Check Federation Peers"
+    description: >
+      Query the Fedimint federation gateway for peer connectivity.
+      Verify quorum availability and consensus readiness. Flag
+      degraded peer connections.
+    handler_method: check_federation
+    depends_on: [check_service_ports]
+    timeout_seconds: 20
+    retry:
+      max_attempts: 2
+      backoff_seconds: 3
+
+  - id: check_lightning
+    name: "Check Lightning Node"
+    description: >
+      Query the Lightning node for channel status, balance, and
+      routing capability. Verify inbound and outbound liquidity
+      meets minimum thresholds.
+    handler_method: check_lightning
+    depends_on: [check_service_ports]
+    timeout_seconds: 20
+
+  - id: check_camel_security
+    name: "Check CaMel Security Gateway"
+    description: >
+      Verify all 4 CaMel layers are operational. Test a dummy
+      security request through the full pipeline. Validate
+      Byzantine consensus is responsive.
+    handler_method: check_camel_security
+    depends_on: [check_service_ports]
+    timeout_seconds: 15
+
+  - id: handle_alerts
+    name: "Handle Alerts & Auto-Restart"
+    description: >
+      Classify all check results by severity. Attempt auto-restart
+      for critical services with recoverable failures. Send alerts
+      via configured channels based on severity level.
+    handler_method: handle_alerts
+    depends_on: [check_federation, check_lightning, check_camel_security]
+    timeout_seconds: 30
+    always_run: true
+
+notifications:
+  on_healthy:
+    channels: [audit_log]
+    message_template: >
+      System health check passed: all {services_count} services healthy
+  on_warning:
+    channels: [audit_log]
+    message_template: >
+      System health WARNING: {service_name} degraded ({details})
+  on_critical:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      System health CRITICAL: {service_name} down, auto-restart
+      {restart_status}
+  on_emergency:
+    channels: [audit_log, whatsapp]
+    message_template: >
+      EMERGENCY: {services_down} services down, manual intervention required
+
+monitoring:
+  metrics:
+    - name: health_checks_total
+      type: counter
+      description: "Total health checks performed"
+    - name: health_check_failures
+      type: counter
+      description: "Total health check failures"
+    - name: auto_restarts_total
+      type: counter
+      description: "Total auto-restart attempts"
+    - name: auto_restarts_successful
+      type: counter
+      description: "Total successful auto-restarts"
+    - name: service_uptime_pct
+      type: gauge
+      description: "Current service uptime percentage"
