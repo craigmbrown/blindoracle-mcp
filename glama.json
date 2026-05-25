@@ -1,0 +1,51 @@
+{
+  "$schema": "https://glama.ai/mcp/server.schema.json",
+  "name": "blindoracle-mcp",
+  "displayName": "BlindOracle — AI Agent Security Audits & Trust Layer",
+  "description": "Unchallengeable AI agent security audits. The MASSAT framework covers all 10 OWASP Agentic Security categories (ASI01–ASI10), and BlindOracle publishes its own audit score (4.3/10) publicly — transparency is the differentiator. Beyond audits, BlindOracle is the trust layer for the x402 agent economy: ERC-8004 agent passports, ProofDB delegation chains (HMAC-signed, kind-30014), 3-witness on-chain anchoring, and x402 + Fedimint payments. Prediction-market settlement (Kalshi / Polymarket / Chainlink CRE) is included as a capability, not the headline. Apache-2.0.",
+  "tagline": "Unchallengeable AI agent security audits + trust layer for the x402 agent economy",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/craigmbrown/blindoracle-mcp.git"
+  },
+  "homepage": "https://craigmbrown.com/blindoracle/",
+  "documentation": "https://craigmbrown.com/blindoracle/agent-audit-methodology.html",
+  "operator": {
+    "name": "Craig M. Brown",
+    "email": "craigmbrown@gmail.com",
+    "url": "https://craigmbrown.com"
+  },
+  "maintainers": ["craigmbrown"],
+  "install": {
+    "python": "pip install \"blindoracle-mcp @ git+https://github.com/craigmbrown/blindoracle-mcp.git\""
+  },
+  "useCases": [
+    "Third-party security audit of an AI agent or MCP server (MASSAT, OWASP ASI01–ASI10) with an on-chain, independently-verifiable report",
+    "Issue / verify ERC-8004 agent passports and revocation",
+    "Verify a delegation chain (ProofDB kind-30014, HMAC-signed) for billing attribution",
+    "x402 + Fedimint micropayments for agent-to-agent commerce",
+    "Prediction-market settlement via Kalshi / Polymarket / Chainlink CRE"
+  ],
+  "integrations": [
+    "MCP (Model Context Protocol)",
+    "x402 HTTP payments",
+    "Fedimint ecash",
+    "ERC-8004 passports",
+    "Anthropic MCP / Google A2A / Bedrock AgentCore compatible",
+    "Chainlink CRE"
+  ],
+  "tags": [
+    "security",
+    "security-audit",
+    "ai-agents",
+    "agent-security",
+    "owasp",
+    "trust",
+    "reputation",
+    "erc-8004",
+    "x402",
+    "verifiable"
+  ]
+}
