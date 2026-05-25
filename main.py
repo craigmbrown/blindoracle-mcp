@@ -1140,7 +1140,15 @@ async def background_monitoring():
 
 
 # Run startup on module load
-if __name__ == "__main__":
+def main():
+    """Console entry point (pyproject [project.scripts] blindoracle-mcp = main:main).
+
+    Tool introspection (Glama / Smithery / MCP registry) runs the server and calls
+    tools/list immediately after the stdio handshake — it does NOT need the market
+    connections. So startup() (which opens network clients) is bounded by a timeout
+    and is non-fatal: the server always reaches mcp.run() and serves tools/list even
+    when API keys / network are unavailable. Set MCP_SKIP_STARTUP=1 to skip it entirely.
+    """
     import argparse
 
     parser = argparse.ArgumentParser(description="Chainlink Prediction Markets MCP Server")
@@ -1161,23 +1169,32 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Run the startup initialization
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(startup())
+    # Run startup initialization — time-bounded and non-fatal so tool introspection
+    # is never blocked by slow/absent market connections.
+    if os.getenv("MCP_SKIP_STARTUP") != "1":
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(asyncio.wait_for(startup(), timeout=15))
+        except Exception as e:  # asyncio.TimeoutError or any init failure
+            print(f"⚠️ startup skipped/incomplete (serving tools anyway): {e}", file=sys.stderr)
 
-    print(f"✅ MCP server ready to receive requests")
-    print(f"   Transport: {args.transport}")
+    print(f"✅ MCP server ready to receive requests", file=sys.stderr)
+    print(f"   Transport: {args.transport}", file=sys.stderr)
 
     if args.transport == "sse":
-        print(f"   Mount path: {args.mount_path}")
-        print(f"   Endpoint: http://0.0.0.0:{args.port}{args.mount_path}/sse")
+        print(f"   Mount path: {args.mount_path}", file=sys.stderr)
+        print(f"   Endpoint: http://0.0.0.0:{args.port}{args.mount_path}/sse", file=sys.stderr)
         os.environ["FASTMCP_PORT"] = str(args.port)
         mcp.run(transport="sse", mount_path=args.mount_path)
     elif args.transport == "streamable-http":
-        print(f"   Mount path: {args.mount_path}")
-        print(f"   Endpoint: http://0.0.0.0:{args.port}{args.mount_path}")
+        print(f"   Mount path: {args.mount_path}", file=sys.stderr)
+        print(f"   Endpoint: http://0.0.0.0:{args.port}{args.mount_path}", file=sys.stderr)
         os.environ["FASTMCP_PORT"] = str(args.port)
         mcp.run(transport="streamable-http", mount_path=args.mount_path)
     else:
-        # stdio mode - for Claude Desktop integration
+        # stdio mode - for Claude Desktop / Glama / Smithery integration
         mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()
