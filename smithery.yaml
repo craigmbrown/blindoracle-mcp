@@ -1,0 +1,29 @@
+# Smithery configuration for blindoracle-mcp
+# Re-point target: github.com/craigmbrown/blindoracle-mcp (was: blindoracle-docs, off-message)
+# Positioning: AI agent security audits first; trust layer + payments second.
+name: blindoracle-mcp
+displayName: "BlindOracle — AI Agent Security Audits & Trust Layer"
+description: >-
+  Unchallengeable AI agent security audits. MASSAT framework covers all 10 OWASP
+  Agentic Security categories (ASI01–ASI10); BlindOracle's own audit score (4.3/10)
+  is published publicly. Plus the trust layer for the x402 agent economy: ERC-8004
+  passports, ProofDB delegation chains, on-chain anchoring, and x402 + Fedimint
+  payments. Apache-2.0.
+license: Apache-2.0
+homepage: https://craigmbrown.com/blindoracle/
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      anthropicApiKey:
+        type: string
+        description: "Optional — only required for audit capabilities that call an LLM."
+    required: []
+  commandFunction: |
+    (config) => ({
+      command: "python",
+      args: ["main.py"],
+      env: config.anthropicApiKey ? { ANTHROPIC_API_KEY: config.anthropicApiKey } : {}
+    })
