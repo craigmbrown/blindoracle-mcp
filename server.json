@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.craigmbrown/blindoracle",
+  "description": "The trust layer for the x402 agent economy: verifiable agent identity (ERC-8004), on-chain settlement (x402/Base USDC), and independently-auditable proof rails for autonomous agent commerce. Includes forecast-market resolution and private settlement tools.",
+  "repository": {
+    "url": "https://github.com/craigmbrown/blindoracle-mcp",
+    "source": "github"
+  },
+  "version": "2.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://craigmbrown.com/api/v2/"
+    }
+  ]
+}
