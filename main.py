@@ -16,6 +16,28 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
+# ---------------------------------------------------------------------------
+# STDIO PROTOCOL GUARD  --  must run BEFORE any other project import.
+#
+# Under `--transport stdio` (how Claude Desktop, Glama, Smithery and the MCP
+# registry all launch this server) STDOUT *is* the JSON-RPC channel. This
+# package and its dependencies emit ~1,600 diagnostic print() calls at import
+# and startup ("PropertyTracker initialized", "Loaded metrics from ...").
+# Every one of those lands in the protocol stream ahead of the handshake, so a
+# strict client fails to parse line 1 and aborts before tools/list -- which is
+# exactly why Glama reported "This server cannot be installed" / Quality D.
+#
+# The bug hides locally because when stdout is block-buffered the JSON flushes
+# ahead of the banners; it reproduces reliably under PYTHONUNBUFFERED=1.
+#
+# Rather than rewrite ~1,600 call sites, point sys.stdout at stderr for the
+# whole import + startup phase and hand the real stdout back to the transport
+# immediately before mcp.run(). Diagnostics stay visible (on stderr, where MCP
+# expects them); the protocol channel stays clean.
+# ---------------------------------------------------------------------------
+_REAL_STDOUT = sys.stdout
+sys.stdout = sys.stderr
+
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -1180,6 +1202,12 @@ def main():
 
     print(f"✅ MCP server ready to receive requests", file=sys.stderr)
     print(f"   Transport: {args.transport}", file=sys.stderr)
+
+    # Startup diagnostics are done -- hand the real stdout back to the transport
+    # so the JSON-RPC channel is clean. See STDIO PROTOCOL GUARD at the top of
+    # this file. Harmless for sse/streamable-http, where stdout is not the
+    # protocol channel.
+    sys.stdout = _REAL_STDOUT
 
     if args.transport == "sse":
         print(f"   Mount path: {args.mount_path}", file=sys.stderr)
