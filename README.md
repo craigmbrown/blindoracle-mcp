@@ -1,22 +1,21 @@
 # BlindOracle MCP Server
 
-> **Trust layer for the x402 agent economy.** ERC-8004 passports · x402 + Fedimint payments · ProofDB delegation chains · MASSAT security audits · Chainlink/Kalshi/Polymarket prediction-market settlement.
+> **Trust layer for the x402 agent economy.** ERC-8004 passports · x402 payments settled in USDC on Base · ProofDB delegation chains · MASSAT security audits.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/Model_Context_Protocol-compatible-green.svg)](https://modelcontextprotocol.io)
 
-A Model Context Protocol (MCP) server that exposes the BlindOracle marketplace as MCP tools — verifiable agent commerce with cryptographic identity, sub-cent inter-agent payments, append-only audit trails, and prediction-market settlement composed from Chainlink + Kalshi + Polymarket oracles.
+A Model Context Protocol (MCP) server that exposes the BlindOracle marketplace as MCP tools — verifiable agent commerce with cryptographic identity, sub-cent inter-agent payments, and append-only audit trails.
 
 ## What this server gives your agent
 
 | Capability | How |
 |---|---|
 | **Portable identity** | ERC-8004 passport — chain-anchored agent_id bound to operator_id. Free to mint. Replaces OAuth for credential rotation. |
-| **Payment** | x402 HTTP 402 challenge + Fedimint ecash settlement. Sub-cent per call. No merchant-of-record. |
+| **Payment** | x402 HTTP 402 challenge, settled in USDC on Base. Sub-cent per call. No merchant-of-record. |
 | **Audit** | ProofDB — 15 cryptographic proof kinds incl. ProofOfDelegation (kind 30014). HMAC-SHA256, append-only, 18+ month queryable. MiCA/SOC2-ready. |
-| **Security** | MASSAT framework covers all 10 OWASP Agent Security categories (ASI01–ASI10). Our own audit score (4.3/10) is published publicly. |
-| **Prediction markets** | Kalshi WebSocket + Polymarket CLOB + Chainlink CRE settlement. Live treasury on Base. |
+| **Security** | MASSAT framework covers all 10 OWASP Agent Security categories (ASI01–ASI10). Findings published publicly — transparency is the differentiator. |
 
 ## Quick start (5 minutes)
 
@@ -48,13 +47,11 @@ Or add to your Claude Desktop / Cursor / continue.dev MCP config:
 ```
 main.py                      MCP server entry point (FastMCP)
 pyproject.toml               Package metadata + dependencies
-core/                        Core MCP tooling + BLP framework + chainlink integration
-prediction_markets/          Kalshi + Polymarket + market aggregator
+core/                        Core MCP tooling + BLP framework
 sub_agents/                  Design/Implementation/Testing/Deployment/Operations agents
 alerting/                    Alert routing + email/whatsapp channels (env-var configured)
 trading_signals/             Signal generator + store
 contracts/                   Solidity smart contracts (PrivateClaimVerifier, AgentRegistry, etc.)
-cre-workflows/               Chainlink CRE workflow definitions
 ```
 
 ## Configuration
@@ -67,17 +64,14 @@ The server reads its operator-specific configuration from environment variables.
 | `BLINDORACLE_OPERATOR_WHATSAPP` | P0 alert SMS-style channel | (none) |
 | `BLINDORACLE_SENDER_EMAIL` | Outbound email From: address | `agent@example.com` (placeholder) |
 | `BLINDORACLE_PASSPORT_ID` | Your ERC-8004 passport ID | (mint free at the BlindOracle marketplace) |
-| `BLINDORACLE_ECASH_WALLET` | Fedimint mint URL for ecash settlement | TheBaby federation default |
-
-For prediction-market integrations, also set `KALSHI_API_KEY`, `POLYMARKET_API_KEY`, `CHAINLINK_RPC_URL` per your provider docs.
 
 ## Try the live marketplace (no install needed)
 
 ```bash
-# See real settled cash on Base — the marketplace IS running
+# See the treasury's live solvency status on Base — the marketplace IS running
 curl https://api.craigmbrown.com/a2a/treasury/balances
 
-# Read the agent-services manifest (15 live services)
+# Read the agent-services manifest (live services)
 curl https://craigmbrown.com/.well-known/agent-services.json | jq '.services | length'
 
 # See the public MCP server card
@@ -87,7 +81,7 @@ curl https://craigmbrown.com/.well-known/mcp/server-card.json
 ## Architecture & deeper reading
 
 - [How BlindOracle Works](https://craigmbrown.com/blindoracle/how-it-works.html) — architecture + settlement pipeline + privacy layer + payment rails
-- [API Reference](https://craigmbrown.com/blindoracle/api/) — all 15 services with schemas
+- [API Reference](https://craigmbrown.com/blindoracle/api/) — services with schemas
 - [Solo FAQ](https://craigmbrown.com/blindoracle/faq/solo.html) — 10 owner questions for 1–5 agent fleets
 - [Team FAQ](https://craigmbrown.com/blindoracle/faq/team.html) — 5–50 agent fleets
 - [Marketplace-Operator FAQ](https://craigmbrown.com/blindoracle/faq/marketplace-operator.html) — 50+ agents, MiCA/SOC2/SLA
@@ -103,12 +97,12 @@ curl https://craigmbrown.com/.well-known/mcp/server-card.json
 
 ## Production evidence
 
-- **Live treasury on Base** at `0x5E70…4EB9` — verifiable via `curl https://api.craigmbrown.com/a2a/treasury/balances`
-- **$0.76 settled cash** across 7 of 9 settlement rails (x402, Fedimint, Lightning, USDC, ...)
-- **15 services live** at `/.well-known/agent-services.json`
-- **50+ agent fleet** in production with BLP 49/60 reliability score
-- **MASSAT audit score 4.3/10** — published publicly; transparency is the differentiator
-- **17 `/a2a/*` endpoints** live at `api.craigmbrown.com/a2a/`
+- **Live treasury on Base** at `0x5E70…4EB9` — solvency status verifiable via `curl https://api.craigmbrown.com/a2a/treasury/balances`
+- **Settlement rail: x402/USDC on Base** — the only customer settlement rail
+- **Services live** at `/.well-known/agent-services.json`
+- **42+ agent fleet** in production, BLP framework 60/60 property coverage
+- **MASSAT self-audit findings published publicly** (OWASP ASI01–ASI10)
+- **`/a2a/*` endpoints** live at `api.craigmbrown.com/a2a/`
 
 ## License
 
