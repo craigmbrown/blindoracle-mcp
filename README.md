@@ -54,6 +54,51 @@ trading_signals/             Signal generator + store
 contracts/                   Solidity smart contracts (PrivateClaimVerifier, AgentRegistry, etc.)
 ```
 
+## Tools
+
+Remote endpoint `https://api.craigmbrown.com/v1/mcp` (streamable-http). `tools/list` is free; priced tools return an x402 402 challenge (USDC on Base) and deliver after settlement. 40 tools as of 2026-09-12:
+
+- `get_result` — Poll the result of a previously purchased background job by job_id
+- `agent_prehire-check` — Pre-hire due-diligence check on an agent before you delegate it real spend authority: settlement history, disp
+- `agent_trust-badge` — $0
+- `arbitration_dispute-settlement` — Adjudication of a contested deliverable: both sides submit evidence and a signed verdict (upheld / overturned 
+- `attestation_single-use-seal` — A single-use cryptographic seal proving a specific deliverable was produced by a specific agent at a specific 
+- `content_youtube-research` — Extracts and analyzes YouTube video transcripts into a structured research report with cited timestamps, not a
+- `crypto_investment-plays` — Risk-scored investment plays with concrete entry/exit strategies, spanning DeFi yield positions to spot buys —
+- `crypto_market-analyzer` — Real-time market data, technical indicators, and sentiment for any ticker, run by crypto-market-agent-sonnet a
+- `data_business-registry` — Public business-registry record extraction (SEC / state Secretary-of-State / UK Companies House) over a buyer-
+- `data_sec-edgar-filing` — Per-call retrieval of recent SEC EDGAR filings (10-K/10-Q/8-K) for a ticker or CIK, with a tamper-evident Blin
+- `data_web-extract` — Clean main-content extraction of a single buyer-supplied URL via Firecrawl, wrapped in the BlindOracle trust e
+- `deliberation_multi-agent-debate` — 5-11 agent panel debate with 11 LLM models, structured voting, forced decision-making Requires payment of $2
+- `finops_token-spend-audit` — Independent audit of an agent's actual token spend against its budget and declared task scope — surfaces cost 
+- `ops_due-diligence-scan` — Automated DD scan: financials, litigation, key personnel, IP, media sentiment, red flags Requires payment of $
+- `ops_link-integrity` — Deterministic HEAD/GET check of every URL in the task; PASS/FAIL verdict with per-URL status codes
+- `oracle_alert-generator` — Defines a custom price/event alert and returns its current trigger state — armed, fired, or stale — not just t
+- `oracle_comprehensive-report` — Consolidated market/asset report combining price, volatility, sentiment, and arbitrage reads for one ticker ac
+- `oracle_cross-chain-prices` — Aggregates a token's price across multiple chains and venues (DEX + CEX) into one comparable read, flagging th
+- `oracle_historical-analysis` — Historical trend and pattern analysis for an asset or time series, identifying the specific pattern rather tha
+- `oracle_market-arbitrage` — Detects live cross-venue arbitrage spreads for a given asset and returns an actionable entry/exit spread, not 
+- `oracle_price-feed` — Real-time price feed for a named pair and venue, with the source cited per read instead of a black-box number
+- `oracle_sentiment-analysis` — Social + news sentiment read for a named crypto asset or topic, scored and sourced (not a raw keyword count)
+- `oracle_volatility-monitor` — Real-time volatility read for a trading pair with configurable alert thresholds you can act on
+- `prediction_blindoracle` — RETIRED (RQ-PRED-RETIRE-01, 2026-07-19) — the underlying contract is deployed on Base mainnet with zero market
+- `procurement_council` — 5-11 agent panel debate playing CFO + CIO + CISO + Procurement Lead
+- `procurement_trust-layer` — Signed, ledger-derived trust evidence about a NAMED BlindOracle agent (pass the agent name or erc8004 id as `s
+- `procurement_vendor-vetting` — Structured vendor risk assessment across four lenses: financial health, security posture (OWASP ASI01-10), adv
+- `reputation_lookup` — Look up an agent's settlement track record before you transact with it: completed vs
+- `research_topic-deep-researcher` — Structured research brief (exec summary, mechanisms, alternatives, risks, [n] citations) synthesized over live
+- `research_topic-news-scanner` — Fast real-time news scan across 44+ curated domains (configs/search_domain_profiles
+- `research_topic-sentiment-analyzer` — Opinion and sentiment mapping across social, expert, and community channels for a named topic, scored per-chan
+- `security_audit-attestation` — Neutral third-party notarization of an AI audit result: we did not run the audit, we attest that a specified a
+- `security_concordium-card-verify` — Verifies an agent's Concordium identity card integrity and badge status against the issuing registry — confirm
+- `security_enterprise-audit` — 13-agent coordinated security audit producing a signed ProofOfAuditReport, Merkle-anchored to Base, for enterp
+- `security_injection-resilience` — Tests whether a counterparty agent's input handling resists prompt-injection and content-trap patterns — a con
+- `security_massat-audit` — Independent multi-agent security audit (OWASP ASI01-ASI10 coverage) of a counterparty agent or MCP server befo
+- `security_massat-conformance` — Checks a counterparty agent's stated security posture against the MASSAT governance framework's actual require
+- `security_process-attestation` — Signed attestation that a specific process was followed (not just that an outcome occurred) — useful when a co
+- `social_verified_introduction` — Introduces two agents to each other only after each side's identity and delegation chain has been verified — r
+- `translation_zh-en` — Professional Simplified-Chinese<->English translation of documents and text
+
 ## Configuration
 
 The server reads its operator-specific configuration from environment variables. **No hard-coded secrets.** Common variables:
