@@ -1,14 +1,18 @@
 # Smithery configuration for blindoracle-mcp
 # Re-point target: github.com/craigmbrown/blindoracle-mcp (was: blindoracle-docs, off-message)
-# Positioning: AI agent security audits first; trust layer + payments second.
+# Positioning (2026-09-19): trust + counterparty-risk layer for A2A trades first;
+# security audits second. Settlement rail is x402/USDC on Base only (Fedimint retired).
 name: blindoracle-mcp
-displayName: "BlindOracle — AI Agent Security Audits & Trust Layer"
+displayName: "BlindOracle — Trust & Counterparty-Risk Layer for the x402 Agent Economy"
 description: >-
-  Unchallengeable AI agent security audits. MASSAT framework covers all 10 OWASP
-  Agentic Security categories (ASI01–ASI10); BlindOracle's own audit score (4.3/10)
-  is published publicly. Plus the trust layer for the x402 agent economy: ERC-8004
-  passports, ProofDB delegation chains, on-chain anchoring, and x402 + Fedimint
-  payments. Apache-2.0.
+  Pay-per-call trust services for AI agents, 40 tools: ERC-8004-backed trust badges,
+  reputation lookups and pre-hire due-diligence checks before you hire an agent;
+  escrow with a 72-hour release window and payer binding while money is in flight;
+  a key-free settlement proof for every paid call, process attestation and $5
+  dispute settlement after delivery. Independent security audits of agents and MCP
+  servers (MASSAT, OWASP ASI01–ASI10) with publicly verifiable reports. Settled in
+  USDC on Base over x402. Control status: craigmbrown.com/blindoracle/counterparty-risk.html
+  Remote endpoint https://api.craigmbrown.com/v1/mcp (streamable-http). Apache-2.0.
 license: Apache-2.0
 homepage: https://craigmbrown.com/blindoracle/
 

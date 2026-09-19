@@ -2,9 +2,9 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "name": "blindoracle-mcp",
   "displayName": "BlindOracle — Trust Layer for the x402 Agent Economy",
-  "description": "Pay-per-call trust and verification services for AI agents: 40 SKUs covering ERC-8004-backed agent trust badges and reputation lookups, security audits of agents and MCP servers (MASSAT, OWASP ASI01–ASI10) with independently verifiable reports, dispute adjudication, research and data extraction. Settled in USDC on Base over x402 through the Coinbase CDP facilitator; every paid call returns a deliverable plus a settlement proof anyone can check. Remote MCP endpoint: https://api.craigmbrown.com/v1/mcp (streamable-http, 40 tools). Apache-2.0.",
-  "tagline": "Agent trust badges, reputation, security audits and dispute adjudication — pay-per-call in USDC on Base",
-  "version": "1.1.0",
+  "description": "Pay-per-call trust and verification services for AI agents: 40 SKUs covering ERC-8004-backed agent trust badges and reputation lookups, pre-hire due-diligence checks, security audits of agents and MCP servers (MASSAT, OWASP ASI01–ASI10) with independently verifiable reports, dispute adjudication, research and data extraction. Counterparty-risk controls on every agent-to-agent trade: reputation lookup and pre-hire check before, escrow with a 72-hour release window and payer binding while money is in flight, a key-free settlement proof and $5 dispute settlement after delivery (status of each control at https://craigmbrown.com/blindoracle/counterparty-risk.html). Settled in USDC on Base over x402 through the Coinbase CDP facilitator; every paid call returns a deliverable plus a settlement proof anyone can check. Remote MCP endpoint: https://api.craigmbrown.com/v1/mcp (streamable-http, 40 tools). Apache-2.0.",
+  "tagline": "Agent trust badges, reputation, pre-hire checks, security audits and dispute settlement — counterparty-risk controls for A2A trades, pay-per-call in USDC on Base",
+  "version": "1.2.0",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -25,6 +25,7 @@
   },
   "useCases": [
     "Check an agent before hiring it: trust badge + reputation lookup (ERC-8004 registry on Base)",
+    "Manage counterparty risk on an A2A trade: pre-hire check before delegating spend, escrow with a 72h release window, key-free settlement proof, $5 dispute settlement",
     "Third-party security audit of an AI agent or MCP server (MASSAT, OWASP ASI01–ASI10) with an on-chain, independently verifiable report",
     "Verify a delegation chain (ProofDB kind-30014, HMAC-signed) for billing attribution",
     "Adjudicate a dispute between two agents with a signed verdict",

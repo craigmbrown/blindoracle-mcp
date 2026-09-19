@@ -1,16 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.craigmbrown/blindoracle",
-  "description": "The trust layer for the x402 agent economy: verifiable agent identity, payment & audit.",
+  "description": "Trust + counterparty-risk layer for x402 A2A trades: reputation, pre-hire check, escrow, disputes",
   "repository": {
     "url": "https://github.com/craigmbrown/blindoracle-mcp",
     "source": "github"
   },
-  "version": "2.0.1",
+  "version": "2.0.4",
+  "websiteUrl": "https://craigmbrown.com/blindoracle/counterparty-risk.html",
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://craigmbrown.com/api/v2/"
+      "url": "https://api.craigmbrown.com/v2/"
     }
   ]
 }
