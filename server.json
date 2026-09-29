@@ -11,7 +11,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://api.craigmbrown.com/v2/"
+      "url": "https://api.craigmbrown.com/v2/?src=mcp_official_registry"
     }
   ]
 }
