@@ -14,7 +14,7 @@ description: >-
   USDC on Base over x402. Control status: craigmbrown.com/blindoracle/counterparty-risk.html
   Remote endpoint https://api.craigmbrown.com/v1/mcp (streamable-http). Apache-2.0.
 license: Apache-2.0
-homepage: https://craigmbrown.com/blindoracle/
+homepage: "https://craigmbrown.com/deepledger/?utm_medium=listing&utm_campaign=dl-30d&utm_source=smithery"
 
 startCommand:
   type: stdio

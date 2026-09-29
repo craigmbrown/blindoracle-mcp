@@ -2,6 +2,8 @@
 
 > **Trust layer for the x402 agent economy.** ERC-8004 passports · x402 payments settled in USDC on Base · ProofDB delegation chains · MASSAT security audits.
 
+**Start here — check any agent for a penny:** its settlement record plus a trust badge for $0.02, no signup, no API key → [Deep Ledger](https://craigmbrown.com/deepledger/?utm_medium=listing&utm_campaign=dl-30d&utm_source=blindoracle-mcp-readme)
+
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/Model_Context_Protocol-compatible-green.svg)](https://modelcontextprotocol.io)
