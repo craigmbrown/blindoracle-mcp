@@ -184,7 +184,7 @@ Apache 2.0 — see [LICENSE](LICENSE). Open-core: the framework is permissively 
 
 ## Contributing
 
-PRs welcome. Issues tracker at [github.com/craigmbrown/blindoracle-docs/issues](https://github.com/craigmbrown/blindoracle-docs/issues).
+PRs welcome. File issues here: [github.com/craigmbrown/blindoracle-mcp/issues](https://github.com/craigmbrown/blindoracle-mcp/issues) — this repo is canonical; `blindoracle-docs` is being consolidated into it.
 
 For security disclosures: please email security@craigmbrown.com (do NOT file a public issue). MASSAT audit findings welcome via the same channel.
 
