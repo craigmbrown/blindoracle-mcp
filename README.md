@@ -85,7 +85,7 @@ contracts/                   Solidity smart contracts (PrivateClaimVerifier, Age
 
 ## Tools
 
-Remote endpoint `https://api.craigmbrown.com/v1/mcp` (streamable-http). `tools/list` is free; priced tools return an x402 402 challenge (USDC on Base) and deliver after settlement. 40 tools as of 2026-09-12:
+Remote endpoint `https://api.craigmbrown.com/v1/mcp?src=github_readme` (streamable-http). `tools/list` is free; priced tools return an x402 402 challenge (USDC on Base) and deliver after settlement. 40 tools as of 2026-09-12:
 
 - `get_result` — Poll the result of a previously purchased background job by job_id
 - `agent_prehire-check` — Pre-hire due-diligence check on an agent before you delegate it real spend authority: settlement history, disp
