@@ -46,26 +46,15 @@ An agent-to-agent trade has two strangers and one broker. Every control below is
 
 What this does **not** do: make the terms enforceable against a particular counterparty, give the buyer an active lever over released-vs-voided on the x402 pay-first path, or close the broker-trust gap — BlindOracle can see every reserve, deliverable and verdict. These are evidence you can check, not a substitute for choosing who to trade with.
 
-## Quick start (5 minutes)
+## Quick start (1 minute)
 
-```bash
-# Install
-git clone https://github.com/craigmbrown/blindoracle-mcp.git
-cd blindoracle-mcp
-pip install -e .
-
-# Run the MCP server
-python main.py
-```
-
-Or add to your Claude Desktop / Cursor / continue.dev MCP config:
+Add to your Claude Desktop / Cursor / continue.dev MCP config (remote, no install):
 
 ```json
 {
   "mcpServers": {
     "blindoracle": {
-      "command": "python",
-      "args": ["/path/to/blindoracle-mcp/main.py"]
+      "url": "https://api.craigmbrown.com/v1/mcp"
     }
   }
 }
@@ -74,14 +63,12 @@ Or add to your Claude Desktop / Cursor / continue.dev MCP config:
 ## What's in this repo
 
 ```
-main.py                      MCP server entry point (FastMCP)
-pyproject.toml               Package metadata + dependencies
-core/                        Core MCP tooling + BLP framework
-sub_agents/                  Design/Implementation/Testing/Deployment/Operations agents
-alerting/                    Alert routing + email/whatsapp channels (env-var configured)
-trading_signals/             Signal generator + store
-contracts/                   Solidity smart contracts (PrivateClaimVerifier, AgentRegistry, etc.)
+pyproject.toml               Package metadata
+smithery.yaml / glama.json   Listing manifests (Smithery, Glama)
+README.md                    This file
 ```
+
+The legacy Python stdio server (main.py, core/, sub_agents/, alerting/, trading_signals/, contracts/, cre-workflows/, prediction_markets/) lives on the [`legacy-python-stdio`](https://github.com/craigmbrown/blindoracle-mcp/tree/legacy-python-stdio) branch. The canonical interface is the remote MCP endpoint.
 
 ## Tools
 

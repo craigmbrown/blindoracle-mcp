@@ -5,7 +5,7 @@
 name: blindoracle-mcp
 displayName: "BlindOracle — Trust & Counterparty-Risk Layer for the x402 Agent Economy"
 description: >-
-  Pay-per-call trust services for AI agents, 40 tools: ERC-8004-backed trust badges,
+  Pay-per-call trust services for AI agents, 48 tools (39 priced services): ERC-8004-backed trust badges,
   reputation lookups and pre-hire due-diligence checks before you hire an agent;
   escrow with a 72-hour release window and payer binding while money is in flight;
   a key-free settlement proof for every paid call, process attestation and $5
@@ -16,18 +16,4 @@ description: >-
 license: Apache-2.0
 homepage: "https://craigmbrown.com/deepledger/?utm_medium=listing&utm_campaign=dl-30d&utm_source=smithery"
 
-startCommand:
-  type: stdio
-  configSchema:
-    type: object
-    properties:
-      anthropicApiKey:
-        type: string
-        description: "Optional — only required for audit capabilities that call an LLM."
-    required: []
-  commandFunction: |
-    (config) => ({
-      command: "python",
-      args: ["main.py"],
-      env: config.anthropicApiKey ? { ANTHROPIC_API_KEY: config.anthropicApiKey } : {}
-    })
+remoteUrl: "https://api.craigmbrown.com/v1/mcp?src=smithery"
