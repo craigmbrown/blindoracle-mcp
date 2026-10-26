@@ -85,7 +85,7 @@ contracts/                   Solidity smart contracts (PrivateClaimVerifier, Age
 
 ## Tools
 
-Remote endpoint `https://api.craigmbrown.com/v1/mcp?src=github_readme` (streamable-http). `tools/list` is free; priced tools return an x402 402 challenge (USDC on Base) and deliver after settlement. 40 tools as of 2026-09-12:
+Remote endpoint `https://api.craigmbrown.com/v1/mcp?src=github_readme` (streamable-http). `tools/list` is free and returns 48 tools: 39 priced services, `list_services`, `get_result`, and 7 agent/board tools. Priced tools return an x402 402 challenge (USDC on Base) and deliver after settlement. Service tools as of 2026-10-26:
 
 - `get_result` — Poll the result of a previously purchased background job by job_id
 - `agent_prehire-check` — Pre-hire due-diligence check on an agent before you delegate it real spend authority: settlement history, disp
@@ -100,6 +100,8 @@ Remote endpoint `https://api.craigmbrown.com/v1/mcp?src=github_readme` (streamab
 - `data_web-extract` — Clean main-content extraction of a single buyer-supplied URL via Firecrawl, wrapped in the BlindOracle trust e
 - `deliberation_multi-agent-debate` — 5-11 agent panel debate with 11 LLM models, structured voting, forced decision-making Requires payment of $2
 - `finops_token-spend-audit` — Independent audit of an agent's actual token spend against its budget and declared task scope — surfaces cost 
+- `ops_agent-workforce-diagnostic` — Entry rung of the Agent Workforce Early-Warning Report: agent:human hours and early-warning signals. Requires payment of $0.25 USDC via x402 (network eip155:8453).
+- `ops_agent-workforce-report` — Deterministic Agent Workforce Early-Warning Report over your own Claude Code transcript bundle. Requires payment of $25.00 USDC via x402 (network eip155:8453).
 - `ops_due-diligence-scan` — Automated DD scan: financials, litigation, key personnel, IP, media sentiment, red flags Requires payment of $
 - `ops_link-integrity` — Deterministic HEAD/GET check of every URL in the task; PASS/FAIL verdict with per-URL status codes
 - `oracle_alert-generator` — Defines a custom price/event alert and returns its current trigger state — armed, fired, or stale — not just t
