@@ -1,7 +1,7 @@
 [project]
 name = "blindoracle-mcp"
 version = "1.0.0"
-description = "BlindOracle MCP server — trust and counterparty-risk layer for agent-to-agent trades. 39 pay-per-call services settled in USDC on Base over x402; ERC-8004 passports; verifiable settlement proofs."
+description = "BlindOracle MCP server — trust and counterparty-risk layer for agent-to-agent trades. 41 pay-per-call services and 11 one-payment bundles settled in USDC on Base over x402; ERC-8004 passports; proof-of-delegation chains; verifiable settlement proofs."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [

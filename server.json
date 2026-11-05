@@ -1,12 +1,12 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.craigmbrown/blindoracle",
-  "description": "Trust + counterparty-risk layer for x402 A2A trades: reputation, pre-hire check, escrow, disputes",
+  "description": "Trust layer for x402 A2A trades: reputation, pre-hire checks, escrow, disputes, delegation chains",
   "repository": {
     "url": "https://github.com/craigmbrown/blindoracle-mcp",
     "source": "github"
   },
-  "version": "2.0.4",
+  "version": "2.0.5",
   "websiteUrl": "https://craigmbrown.com/blindoracle/counterparty-risk.html",
   "remotes": [
     {
