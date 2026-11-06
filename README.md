@@ -212,7 +212,6 @@ curl https://craigmbrown.com/.well-known/mcp/server-card.json
 - **Live treasury on Base** at `0x5E70…4EB9` — solvency status verifiable via `curl https://api.craigmbrown.com/a2a/treasury/balances`
 - **Settlement rail: x402/USDC on Base** — the only customer settlement rail
 - **Services live** at `/.well-known/agent-services.json`
-- **42+ agent fleet** in production, BLP framework 60/60 property coverage
 - **MASSAT self-audit findings published publicly** (OWASP ASI01–ASI10)
 - **`/a2a/*` endpoints** live at `api.craigmbrown.com/a2a/`
 
