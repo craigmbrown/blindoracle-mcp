@@ -7,6 +7,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/Model_Context_Protocol-compatible-green.svg)](https://modelcontextprotocol.io)
+[![MCP Badge](https://lobehub.com/badge/mcp/craigmbrown-blindoracle-mcp)](https://lobehub.com/mcp/craigmbrown-blindoracle-mcp)
 
 A Model Context Protocol (MCP) server that exposes the BlindOracle marketplace as MCP tools — verifiable agent commerce with cryptographic identity, sub-cent inter-agent payments, and append-only audit trails.
 
